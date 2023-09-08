@@ -22,9 +22,7 @@ rule all:
     input:
         expand("../GRCh38_mapped_seq/{sra}.fa", sra=sra_run_ids),
         expand("../{ref_genomes}/stats/n_total_read.csv", ref_genomes=ref_genomes),
-        expand("../{ref_genomes}/stats/n_mapped_read.csv", ref_genomes=ref_genomes),
-        expand("../{ref_genomes}/post_qc_summary/metag_post_qc_read.csv",
-             ref_genomes=ref_genomes)
+        expand("../{ref_genomes}/stats/n_mapped_read.csv", ref_genomes=ref_genomes)
 
 rule get_sra_fq:
     output:
@@ -526,36 +524,36 @@ rule combine:
         """
 
 #! below: summarizing the number of post-qc read
-rule count_prior_rarefy:
-    input:
-        "../merged/{sra}.extendedFrags.fastq.gzip"
-    output:
-        temp("../{ref_genomes}/post_qc_summary/{sra}_read_count.csv")
-    params:
-        tmpdir="../{ref_genomes}/post_qc_tmp",
-        tmpdir1="../{ref_genomes}/post_qc_tmp/from_sra",
-        tmpdir2="../{ref_genomes}/post_qc_tmp/from_collab",
-        mem="5g"
-    threads: 1
-    shell:
-        """
-        mkdir -p {params.tmpdir1} {params.tmpdir2}
-        gunzip -c {input} | wc -l > {params.tmpdir}/{wildcards.sra}_read_count.txt && \
-        awk '{{ print FILENAME","$0/4 }}' {params.tmpdir}/{wildcards.sra}_read_count.txt | \
-        sed 's/.*\///g' | sed 's/_.*,/,/' > {output}  && \
-        rm {params.tmpdir}/{wildcards.sra}_read_count.txt
-        """
+# rule count_prior_rarefy:
+#     input:
+#         "../merged/{sra}.extendedFrags.fastq.gzip"
+#     output:
+#         temp("../{ref_genomes}/post_qc_summary/{sra}_read_count.csv")
+#     params:
+#         tmpdir="../{ref_genomes}/post_qc_tmp",
+#         tmpdir1="../{ref_genomes}/post_qc_tmp/from_sra",
+#         tmpdir2="../{ref_genomes}/post_qc_tmp/from_collab",
+#         mem="5g"
+#     threads: 1
+#     shell:
+#         """
+#         mkdir -p {params.tmpdir1} {params.tmpdir2}
+#         gunzip -c {input} | wc -l > {params.tmpdir}/{wildcards.sra}_read_count.txt && \
+#         awk '{{ print FILENAME","$0/4 }}' {params.tmpdir}/{wildcards.sra}_read_count.txt | \
+#         sed 's/.*\///g' | sed 's/_.*,/,/' > {output}  && \
+#         rm {params.tmpdir}/{wildcards.sra}_read_count.txt
+#         """
 
-rule combine_prior_rarefy:
-    input:
-        expand("../{{ref_genomes}}/post_qc_summary/{sra}_read_count.csv",
-            sra=sra_run_ids)
-    output:
-        "../{ref_genomes}/post_qc_summary/metag_post_qc_read.csv"
-    threads: 1
-    params: mem="1g"
-    shell:
-        """
-        echo "run_accessions,survived_reads" > {output}; \
-        cat {input} >> {output}
-        """
+# rule combine_prior_rarefy:
+#     input:
+#         expand("../{{ref_genomes}}/post_qc_summary/{sra}_read_count.csv",
+#             sra=sra_run_ids)
+#     output:
+#         "../{ref_genomes}/post_qc_summary/metag_post_qc_read.csv"
+#     threads: 1
+#     params: mem="1g"
+#     shell:
+#         """
+#         echo "run_accessions,survived_reads" > {output}; \
+#         cat {input} >> {output}
+#         """
