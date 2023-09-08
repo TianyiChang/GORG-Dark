@@ -8,6 +8,10 @@
 # cluster collected samples based on longtitude and latitude
 # reference: https://gis.stackexchange.com/questions/17638/clustering-spatial-data-in-r
 
+#! note 202309: adjust the aphotic zone for Black Sea plates to >45m in "addit_seas.csv" (now is "addit_seas_v2.csv")
+#! ref: https://www.frontiersin.org/articles/10.3389/fmars.2017.00090/full
+#! ref: https://www.mdpi.com/2673-1924/1/4/18
+
 library(rgdal)
 library(geosphere)
 library(tidyverse)
@@ -32,6 +36,20 @@ sag_meta_location <- read_csv("overview_gorg_dark_v1_20221104.csv") %>%
         ) %>%
     distinct(plate, .keep_all = TRUE) %>%
     select(latitude, longitude, group, depth, depth_group, plate)
+
+# inclue Black Sea plate info manually
+black_sea_location <- data_frame(
+    latitude = c(43.5320233, 43.5320233),
+    longitude = c(32.5151083, 32.5151083),
+    group = c("sag", "sag"),
+    depth = c(94.7, 104.6),
+    depth_group = c(NA, NA),
+    plate = c("AM-685", "AM-689")
+)
+
+sag_meta_location <- bind_rows(
+    sag_meta_location, black_sea_location
+)
 
 # tara_metat_sample <- read_csv("metat_tara_prok_vir.csv") %>%
 #     select(sample_accessions, run_accessions) %>%
@@ -139,7 +157,7 @@ collected_meta <- read_csv("maria_collected_221031.csv") %>%
 addit_collab <- read_csv("/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/frag_recruit/metadata/addit_collab.csv") %>%
     rename(run_accessions = metag, group = dataset)
 
-addit_seas <- read_csv("/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/frag_recruit/metadata/addit_seas.csv") %>%
+addit_seas <- read_csv("/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/frag_recruit/metadata/addit_seas_v2.csv") %>%
     rename(run_accessions = run, group = dataset) %>%
     select(-depth_group)
 
@@ -155,7 +173,12 @@ df <- bind_rows(
 
 df_addit <- bind_rows(
     df, addit_collab, addit_seas
-)
+    ) %>%
+    mutate(ocean_province =
+        case_when(
+            plate == "AM-685" | plate == "AM-689" ~ "Black Sea",
+            TRUE ~ ocean_province
+        )) 
 
 df_dark <- filter(df, depth_group != "epi")
 
