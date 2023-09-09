@@ -30,9 +30,10 @@ rule get_sra_fq:
         temp("../../metag/from_sra/{sra}_2.fastq")
     params:
         sra_out="../../metag/sra",
-        fq_out="../../metag/from_sra/",
-        mem="5g"
+        fq_out="../../metag/from_sra/"
     conda: "../envs/sra_tools.yml"
+    resources:
+        mem_mb=5000
     threads: 4
     shell:
         """
@@ -56,8 +57,9 @@ rule compress_sra_fq:
         temp("../../metag/from_sra/{sra}_1.fastq.gz"),
         temp("../../metag/from_sra/{sra}_2.fastq.gz")
     conda: "../envs/pigz.yml"
+    resources:
+        mem_mb=5000
     threads: 8
-    params: mem="5g"
     shell:
         "pigz {input} -p {threads}"
 
@@ -72,8 +74,9 @@ rule trimmomatic:
         temp("../trimmomatic/{sra}_2_unpaired.fq.gz")
     conda:
         "trimmomatic"
+    resources:
+        mem_mb=5000
     threads: 12
-    params: mem="5g"
     shell:
         """
         trimmomatic PE -phred33 -threads 12 \
@@ -90,10 +93,11 @@ rule read_merge:
     output:
         temp("../merged/{sra}.extendedFrags.fastq.gzip")
     conda: "../envs/flash.yml"
+    resources:
+        mem_mb=5000
     threads: 1
     params:
-        outdir="../merged",
-        mem="5g"
+        outdir="../merged"
     shell:
         """
         (flash -x 0.05 -m 20 -M 999 \
@@ -111,9 +115,10 @@ rule read_rarefy:
     params:
         seed="940216",
         n_read="1000000",
-        outdir="../rarefy",
-        mem="5g"
+        outdir="../rarefy"
     conda: "../envs/seqtk.yml"
+    resources:
+        mem_mb=5000
     threads: 1
     shell:
         """
@@ -132,11 +137,12 @@ rule rm_lc_read:
         fq="../rarefy/{sra}.fq"
     output:
         temp("../lc_rmd_reads/{sra}_lc_rmd.fq")
+    resources:
+        mem_mb=1000
     threads: 4
     params:
         distinct_2mer="0.15",
-        base_freq="0.02",
-        mem="1g"
+        base_freq="0.02"
     shell:
         """
         {input.rscript} \
@@ -150,9 +156,9 @@ rule GRCh38_bwa_index:
     output:
         touch("../../reference/GRCh38_p14_genomic.ref")
     conda: "../envs/bwa_snake.yml"
+    resources:
+        mem_mb=5000
     threads: 6
-    params:
-        mem="5g"
     shell:
         """
         bwa index {input}
@@ -167,8 +173,9 @@ rule GRCh38_bwa_map:
         temp("../GRCh38_mapped/{sra}.bam")
     conda:
         "../envs/bwa_snake.yml"
+    resources:
+        mem_mb=5000
     threads: 12
-    params: mem="5g"
     shell:
         """
         bwa mem -t {threads} {input.ref} {input.seq} | \
@@ -182,8 +189,9 @@ rule GRCh38_samtools_sort:
         temp("../GRCh38_sorted/{sra}.bam")
     conda:
         "../envs/bwa_snake.yml"
+    resources:
+        mem_mb=5000
     threads: 12
-    params: mem="5g"
     shell:
         "samtools sort -@ {threads} {input} -o {output}"
 
@@ -194,8 +202,9 @@ rule GRCh38_samtools_index:
         temp("../GRCh38_sorted/{sra}.bam.bai")
     conda:
         "../envs/bwa_snake.yml"
+    resources:
+        mem_mb=5000
     threads: 1
-    params: mem="5g"
     shell:
         "samtools index {input}"
 
@@ -207,9 +216,10 @@ rule GRCh38_bam_aln_filter:
     output:
         mapped=temp("../GRCh38_filtered_mapped/{sra}.bam"),
         unmapped=temp("../GRCh38_filtered_unmapped/{sra}.bam")
+    resources:
+        mem_mb=5000
     threads: 12
     params:
-        mem="5g",
         aln_ani="0.99",
         aln_cov="0.9",
         aln_len="100"
@@ -225,9 +235,10 @@ rule GRCh38_unmapped_bam_sort_name:
         "../GRCh38_filtered_unmapped/{sra}.bam"
     output:
         temp("../GRCh38_unmapped_sort/{sra}.bam")
+    resources:
+        mem_mb=5000
     threads: 12
     conda: "../envs/bwa_snake.yml"
-    params: mem="5g"
     shell:
         """
         samtools sort -n -@ {threads} {input} -o {output}
@@ -238,9 +249,10 @@ rule GRCh38_mapped_bam_sort_name:
         "../GRCh38_filtered_mapped/{sra}.bam"
     output:
         temp("../GRCh38_mapped_sort/{sra}.bam")
+    resources:
+        mem_mb=5000
     threads: 12
     conda: "../envs/bwa_snake.yml"
-    params: mem="5g"
     shell:
         """
         samtools sort -n -@ {threads} {input} -o {output}
@@ -251,9 +263,10 @@ rule GRCh38_unmapped_bam2fq:
         "../GRCh38_unmapped_sort/{sra}.bam"
     output:
         temp("../GRCh38_unmapped_seq/{sra}.fq")
+    resources:
+        mem_mb=5000
     threads: 2
     conda: "../envs/bwa_snake.yml"
-    params: mem="5g"
     shell:
         """
         samtools fastq -@ {threads} -f 4 {input} > {output}
@@ -264,9 +277,10 @@ rule GRCh38_mapped_bam2fq:
         "../GRCh38_mapped_sort/{sra}.bam"
     output:
         temp("../GRCh38_mapped_seq/{sra}.fq")
+    resources:
+        mem_mb=5000
     threads: 2
     conda: "../envs/bwa_snake.yml"
-    params: mem="5g"
     shell:
         """
         samtools fastq -@ {threads} -F 4 {input} > {output}
@@ -277,8 +291,9 @@ rule GRCh38_mapped_fq2fa:
         "../GRCh38_mapped_seq/{sra}.fq"
     output:
         "../GRCh38_mapped_seq/{sra}.fa"
+    resources:
+        mem_mb=1000
     threads: 1
-    params: mem="1g"
     shell:
         """
         sed -n '1~4s/^@/>/p;2~4p' {input} > {output}
@@ -290,8 +305,9 @@ rule bwa_index_ref_genomes:
     output:
         done=touch("../../reference/{ref_genomes}.ref")
     conda: "../envs/bwa_snake.yml"
+    resources:
+        mem_mb=20000
     threads: 24
-    params: mem="20g"
     shell:
         """
         bwa index {input}
@@ -306,8 +322,9 @@ rule metag_sag_bwa_map:
         temp("../{ref_genomes}/mapped/{sra}.bam")
     conda:
         "../envs/bwa_snake.yml"
+    resources:
+        mem_mb=50000
     threads: 15
-    params: mem="200g"
     shell:
         """
         bwa mem -t {threads} {input.ref} {input.seq} | \
@@ -321,8 +338,9 @@ rule metag_sag_samtools_sort:
         "../{ref_genomes}/sorted/{sra}.bam"
     conda:
         "../envs/bwa_snake.yml"
+    resources:
+        mem_mb=5000
     threads: 15
-    params: mem="5g"
     shell:
         """
         samtools sort -@ {threads} {input} -o {output}
@@ -333,10 +351,11 @@ rule dustmask:
         "../../low_entropy/test/gd_sags/{sag}.fasta"
     output:
         "../../low_entropy/dustmasker/{sag}.bed"
+    resources:
+        mem_mb=5000
     threads: 1
     conda:
         "../../low_entropy/envs/blast.yml"
-    params: mem="5g"
     shell:
         """
         dustmasker -in {input} -out {output} -outfmt acclist
@@ -348,8 +367,9 @@ rule get_long_lcr_bed:
         rscript=("../../../scripts/pcoa_sag_abund/frag_recruit_lcr.r")
     output:
         "../../low_entropy/long_lcr.bed"
+    resources:
+        mem_mb=5000
     threads: 15
-    params: mem="5g"
     shell:
         """
         {input.rscript} {threads}
@@ -360,12 +380,13 @@ rule barrnap_bac:
        "../../low_entropy/sags/bac/{bac}.fasta"
     output:
         "../../low_entropy/barrnap/{bac}.gff"
+    resources:
+        mem_mb=5000
     threads: 1
     conda:
         "../../low_entropy/envs/barrnap.yml"
     params:
-        outdir="../../low_entropy/barrnap",
-        mem="5g"
+        outdir="../../low_entropy/barrnap"
     shell:
         """
         barrnap --kingdom bac {input} | \
@@ -378,12 +399,13 @@ rule barrnap_arc:
        "../../low_entropy/sags/arc/{arc}.fasta"
     output:
         "../../low_entropy/barrnap/{arc}.gff"
+    resources:
+        mem_mb=5000
     threads: 1
     conda:
         "../../low_entropy/envs/barrnap.yml"
     params:
-        outdir="../../low_entropy/barrnap",
-        mem="5g"
+        outdir="../../low_entropy/barrnap"
     shell:
         """
         barrnap --kingdom arc {input} | \
@@ -398,8 +420,9 @@ rule get_rrna_bed:
         rscript="../../../scripts/pcoa_sag_abund/frag_recruit_rrna.r"
     output:
         "../../low_entropy/rrna.bed"
+    resources:
+        mem_mb=5000
     threads: 15
-    params: mem="5g"
     shell:
         """
         {input.rscript} {threads}
@@ -412,10 +435,11 @@ rule samtools_wo_lcr:
     output:
         "../{ref_genomes}/low_entropy/wo_lcr/{sra}_w_Regions.bam",
         "../{ref_genomes}/low_entropy/wo_lcr/{sra}_wo_Regions.bam"
+    resources:
+        mem_mb=5000
     threads: 1
     conda:
         "../../low_entropy/envs/samtools.yml"
-    params: mem="5g"
     shell:
         """
         samtools view {input[0]} -b -h -o {output[0]} \
@@ -429,10 +453,11 @@ rule samtools_wo_lcr_rrna:
     output:
         "../{ref_genomes}/low_entropy/wo_lcr_rrna/{sra}_w_Regions.bam",
         "../{ref_genomes}/low_entropy/wo_lcr_rrna/{sra}_wo_Regions.bam"
+    resources:
+        mem_mb=5000
     threads: 1
     conda:
         "../../low_entropy/envs/samtools.yml"
-    params: mem="5g"
     shell:
         """
         samtools view {input[0]} -b -h -o {output[0]} \
@@ -446,8 +471,9 @@ rule samtools_wo_lcr_rrna_index:
         "../{ref_genomes}/low_entropy/wo_lcr_rrna/{sra}_wo_Regions.bam.bai"
     conda:
         "../envs/bwa_snake.yml"
+    resources:
+        mem_mb=5000
     threads: 1
-    params: mem="5g"
     shell:
         "samtools index {input}"
 
@@ -459,9 +485,10 @@ rule bam_aln_filter_count:
     output:
         stat=temp("../{ref_genomes}/stats/{sra}_mapped_filtered.tmp"),
         bam="../{ref_genomes}/aln_filter_bam/{sra}.bam"
+    resources:
+        mem_mb=5000
     threads: 12
     params:
-        mem="5g",
         aln_ani="0.95",
         aln_cov="0",
         aln_len="100"
@@ -480,8 +507,9 @@ rule count_total:
     output:
        temp("../{ref_genomes}/stats/{sra}_total_read.tmp")
     conda: "../envs/bwa_snake.yml"
+    resources:
+        mem_mb=5000
     threads: 1
-    params: mem="5g"
     shell:
         """
         samtools view -c {input[0]} > {output}
@@ -494,8 +522,9 @@ rule format:
     output:
         total=temp("../{ref_genomes}/stats/{sra}_total_read.tmp2"),
         mapped=temp("../{ref_genomes}/stats/{sra}_mapped_filtered.tmp2")
+    resources:
+        mem_mb=1000
     threads: 1
-    params: mem="1g"
     shell:
         """
         awk '{{ print FILENAME","$0 }}' {input.total} | \
@@ -513,8 +542,9 @@ rule combine:
     output:
         total_final="../{ref_genomes}/stats/n_total_read.csv",
         mapped_final="../{ref_genomes}/stats/n_mapped_read.csv"
+    resources:
+        mem_mb=1000
     threads: 1
-    params: mem="1g"
     shell:
         """
         echo "run_accessions,n_total_reads" > {output.total_final}; \
@@ -534,6 +564,7 @@ rule combine:
 #         tmpdir1="../{ref_genomes}/post_qc_tmp/from_sra",
 #         tmpdir2="../{ref_genomes}/post_qc_tmp/from_collab",
 #         mem="5g"
+#     resources:
 #     threads: 1
 #     shell:
 #         """
@@ -550,6 +581,7 @@ rule combine:
 #             sra=sra_run_ids)
 #     output:
 #         "../{ref_genomes}/post_qc_summary/metag_post_qc_read.csv"
+#     resources:
 #     threads: 1
 #     params: mem="1g"
 #     shell:

@@ -115,7 +115,7 @@ cd $maindir/result_4_sra_metag/snakefiles
 snakemake -s frag_recruit_sra.smk --rulegraph | dot -Tpdf > frag_recruit_sra_dag.pdf
 
 # dry run
-snakemake -n -s frag_recruit_sra.smk
+snakemake -n -s frag_recruit_sra.smk --rerun-triggers mtime
 
 # using cluster
 # option: --keep-going: do not stop if some of the jobs failed
@@ -123,5 +123,5 @@ snakemake -n -s frag_recruit_sra.smk
 # option:  --rerun-incomplete
 
 snakemake -s frag_recruit_sra.smk --use-conda \
---cluster 'qsub -q low -l ncpus={threads},mem={params.mem},walltime=48:10:00' \
--j 200 --latency-wait 120 --keep-going
+--cluster 'qsub -q low -l ncpus={threads},mem={resources.mem_mb},walltime=48:10:00' \
+-j 200 --latency-wait 120 --keep-going --rerun-triggers mtime
