@@ -11,6 +11,10 @@ library(scatterpie)
 
 setwd("/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/frag_recruit")
 
+#######################
+## data manipulation ##
+#######################
+
 metadata <- read_csv("metadata/metag_metat_sag_v2.csv") %>%
     mutate(run_accessions = str_replace_all(run_accessions,
         "\\s", ""))
@@ -31,7 +35,7 @@ get_mean_mapping_rate_by_clust <- function(PATH) {
     
     n_mapped_reads <-
         read_csv(str_c
-            ("mapping/", PATH, "/stats/n_mapped_read.csv")) %>%
+            (PATH, "/stats/n_mapped_read.csv")) %>%
         mutate(
             run_accessions = str_replace(run_accessions,
             "_wo_Regions.*", ""),
@@ -40,7 +44,7 @@ get_mean_mapping_rate_by_clust <- function(PATH) {
             )
 
     n_total_reads <- read_csv(str_c
-        ("mapping/", PATH, "/stats/n_total_read.csv")) %>%
+        (PATH, "/stats/n_total_read.csv")) %>%
         mutate(run_accessions = n_mapped_reads$run_accessions)
         
     map_rate <- n_total_reads %>%
@@ -59,35 +63,37 @@ get_mean_mapping_rate_by_clust <- function(PATH) {
         ungroup() %>%
         distinct(clust, .keep_all = TRUE) %>%
         mutate(
-            n_mapped_reads = mapping_rate,
-            n_unmapped_reads = 1 - mapping_rate
+            n_mapped_reads = mean_m_rate,
+            n_unmapped_reads = 1 - mean_m_rate
         )
     
     return(mean_mapping_rate_by_clust)
 
 }
 
-dark <- get_mean_mapping_rate_by_clust("dark/w_bwa_aln_filter/gorg_v2_concat")
+sra_metag <- get_mean_mapping_rate_by_clust("result_4_sra_metag/gorg_v3_concat")
 
-# remove acinas particle metag that already included in 'dark'
-addit_seas <- get_mean_mapping_rate_by_clust("addit_seas_particle/gorg_v2_concat") %>%
-    filter(group != "collected", group != "uncollected")
-
-addit_collab <- get_mean_mapping_rate_by_clust("addit_collaboraters/gorg_v2_concat")
+collab_metag <- get_mean_mapping_rate_by_clust("result_4_local_metag/gorg_v3_concat")
 
 sag_metadata_by_location <- sag_metadata %>%
     distinct(longitude, latitude, .keep_all =  TRUE)
 
 combined_df <- bind_rows(
-    dark, addit_collab, addit_seas
-)
+    sra_metag, collab_metag
+    ) %>%
+    rename(
+        represt_metag_by_location = run_accessions
+    )
 
-# plot world ocean map
+##########################
+## plot world ocean map ##
+##########################
+
 # read shapefile
 
-setwd("/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/frag_recruit/fig")
+fig_path <- c("/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/frag_recruit/fig/")
 
-pdf("mean_mapping_rate_dark_addit_metag.pdf", width=12.5, height=8.25)
+pdf(str_c(fig_path, "mean_mapping_rate_gd_v3.pdf"), width=12.5, height=8.25)
 
     world_map <- map_data('world') %>%
         rename(Longitude = long, Latitude = lat) %>%
@@ -123,3 +129,25 @@ pdf("mean_mapping_rate_dark_addit_metag.pdf", width=12.5, height=8.25)
             scale_fill_manual(values=c("red", "white"), guide="none")
 
 dev.off()
+
+#################################
+## export tables and key stats ##
+#################################
+
+calculation_path <- c("/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/frag_recruit/calculations/")
+table_path <- c("/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/frag_recruit/tables/")
+
+# calculate the mean
+mean_rate <- mean(combined_df$mean_m_rate)
+median_rate <- median(combined_df$mean_m_rate)
+
+# create the text with the mean inserted
+stats <- str_c(
+    "The mean mapping rate normalized by location cluster by GORG-Dark-v3 is ",
+    mean_rate, "\n",
+    "The median mapping rate normalized by location cluster by GORG-Dark-v3 is ",
+    median_rate)
+
+# export the results
+cat(stats, file = str_c(calculation_path, "mean_mapping_rate_overall.txt"))
+write_csv(combined_df, str_c(table_path, "mean_mapping_rate_by_location.csv"))
