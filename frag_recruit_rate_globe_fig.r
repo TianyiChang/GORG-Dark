@@ -31,11 +31,11 @@ sag_metadata <- metadata %>%
     arrange(-metat_same_sample, -metat_same_clust,
         -surf_same_clust, group, .by_group = TRUE)
 
-get_mean_mapping_rate_by_clust <- function(PATH) {
+get_mean_mapping_rate_by_clust <- function(PATH, dataset) {
     
     n_mapped_reads <-
         read_csv(str_c
-            (PATH, "/stats/n_mapped_read.csv")) %>%
+            ({{PATH}}, "/stats/n_mapped_read.csv")) %>%
         mutate(
             run_accessions = str_replace(run_accessions,
             "_wo_Regions.*", ""),
@@ -44,14 +44,15 @@ get_mean_mapping_rate_by_clust <- function(PATH) {
             )
 
     n_total_reads <- read_csv(str_c
-        (PATH, "/stats/n_total_read.csv")) %>%
+        ({{PATH}}, "/stats/n_total_read.csv")) %>%
         mutate(run_accessions = n_mapped_reads$run_accessions)
         
     map_rate <- n_total_reads %>%
         left_join(n_mapped_reads, by = "run_accessions") %>%
         mutate(
             mapping_rate = n_mapped_reads / n_total_reads,
-            n_unmapped_reads = n_total_reads - n_mapped_reads
+            n_unmapped_reads = n_total_reads - n_mapped_reads,
+            dataset = {{dataset}}
             ) %>%
         left_join(metadata_2, by = "run_accessions") %>%
         filter(!is.na(latitude) &
@@ -67,13 +68,19 @@ get_mean_mapping_rate_by_clust <- function(PATH) {
             n_unmapped_reads = 1 - mean_m_rate
         )
     
-    return(mean_mapping_rate_by_clust)
+    return(
+        list(
+            mean_mapping_rate_by_clust=mean_mapping_rate_by_clust,
+            map_rate=map_rate)
+    )
 
 }
 
-sra_metag <- get_mean_mapping_rate_by_clust("result_4_sra_metag/gorg_v3_concat")
+sra_metag <- get_mean_mapping_rate_by_clust(
+    "result_4_sra_metag/gorg_v3_concat", "GORG-Dark")$mean_mapping_rate_by_clust
 
-collab_metag <- get_mean_mapping_rate_by_clust("result_4_local_metag/gorg_v3_concat")
+collab_metag <- get_mean_mapping_rate_by_clust(
+    "result_4_local_metag/gorg_v3_concat", "GORG-Dark")$mean_mapping_rate_by_clust
 
 sag_metadata_by_location <- sag_metadata %>%
     distinct(longitude, latitude, .keep_all =  TRUE)
@@ -148,6 +155,27 @@ stats <- str_c(
     "The median mapping rate normalized by location cluster by GORG-Dark-v3 is ",
     median_rate)
 
+# table 4 mapping rate of all dark metag
+map_rate_all_dark_metag_across_studies <- bind_rows(
+    get_mean_mapping_rate_by_clust(
+        "result_4_sra_metag/gorg_v3_concat", "GORG-Dark")$map_rate,
+    get_mean_mapping_rate_by_clust(
+        "result_4_local_metag/gorg_v3_concat", "GORG-Dark")$map_rate,
+    get_mean_mapping_rate_by_clust(
+        "result_4_sra_metag/outside_omd_mags", "OMD-MAGs")$map_rate,
+    get_mean_mapping_rate_by_clust(
+        "result_4_local_metag/outside_omd_mags", "OMD-MAGs")$map_rate,
+    get_mean_mapping_rate_by_clust(
+        "result_4_sra_metag/outside_acinas_2020", "MDeep-MAGs")$map_rate,
+    get_mean_mapping_rate_by_clust(
+        "result_4_local_metag/outside_acinas_2020", "MDeep-MAGs")$map_rate,
+    get_mean_mapping_rate_by_clust(
+        "result_4_sra_metag/outside_gorg_tropics", "GORG-Tropics")$map_rate,
+    get_mean_mapping_rate_by_clust(
+        "result_4_local_metag/outside_gorg_tropics", "GORG-Tropics")$map_rate,
+)
+
 # export the results
 cat(stats, file = str_c(calculation_path, "mean_mapping_rate_overall.txt"))
 write_csv(combined_df, str_c(table_path, "mean_mapping_rate_by_location.csv"))
+write_csv(map_rate_all_dark_metag_across_studies, str_c(table_path, "mapping_rate_all_metag_across_studies.csv"))
