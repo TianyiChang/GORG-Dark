@@ -5,7 +5,6 @@ library(lme4)
 library(lmerTest)
 library(pbkrtest)
 library(emmeans)
-library(ggplot2)
 
 setwd("/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/frag_recruit/")
 
@@ -220,5 +219,47 @@ ggplot(data=df_logit,
     theme(axis.text.x=element_text(angle=45, vjust=1, hjust=1))
 
 ggsave("between_datasets/v2/box_orig_dataset.pdf",
+    device="pdf", height=5, width=5)
+
+#! update 202309
+setwd("/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/frag_recruit/")
+df <- read_csv("tables/mapping_rate_all_metag_across_studies.csv")
+
+df_modified <- df %>%
+    mutate(
+        region_group = ifelse(
+            (ocean_province == "Baltic Sea" |
+            ocean_province == "Black Sea" |
+            ocean_province == "Arctic Ocean" |
+            ocean_province == "Southern Ocean" |
+            ocean_province == "Red Sea" |
+            ocean_province == "Mediterranean Sea" |
+            ocean_province == "Ross Ice Shelf"),
+            ocean_province, "Open Ocean"
+        )
+    ) %>%
+    filter(dataset != "GORG-Tropics")
+
+df_modified$region_group <- factor(df_modified$region_group,
+    levels = c("Black Sea", "Baltic Sea", "Red Sea",
+    "Mediterranean Sea", "Ross Ice Shelf", "Southern Ocean",
+    "Arctic Ocean", "Open Ocean")
+)
+
+ggplot(data=df_modified,
+    aes(x=region_group, y=mapping_rate, fill=dataset)) +
+    geom_boxplot(outlier.shape = NA) +
+    theme_classic() +
+    labs(y = "Fragment recruitment rate", x= "") +
+    theme(
+        legend.title = element_blank(),
+        legend.key.size = unit(0.5, "cm"),
+        legend.text = element_text(size = 8),
+        legend.position = c(0.5, 0.95),
+        axis.text.x=element_text(angle=45, vjust=1, hjust=1)
+        ) +
+    guides(fill = guide_legend(nrow = 1))
+
+ggsave("fig/box_mapping_rate_dataset.pdf",
     device="pdf", height=5, width=5)
 
