@@ -246,9 +246,13 @@ df_modified$region_group <- factor(df_modified$region_group,
     "Arctic Ocean", "Open Ocean")
 )
 
+df_modified$dataset <- factor(df_modified$dataset,
+    levels = c("GORG-Dark", "OMD-MAGs", "MDeep-MAGs"))
+
 ggplot(data=df_modified,
     aes(x=region_group, y=mapping_rate, fill=dataset)) +
     geom_boxplot(outlier.shape = NA) +
+    scale_fill_manual(values=c("#FF5733", "#FFC300", "#1ABC9C")) +
     theme_classic() +
     labs(y = "Fragment recruitment rate", x= "") +
     theme(
