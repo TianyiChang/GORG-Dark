@@ -19,13 +19,17 @@ library(RColorBrewer)
 
 setwd("/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/frag_recruit/221007")
 
-sag_meta_location <- read_csv("overview_gorg_dark_v1_20221104.csv") %>%
+overview_gdv1 <- read_csv("overview_gorg_dark_v1_20221104.csv") %>%
+    mutate(
+        plate = str_replace(
+            sample_id, "(.*)-\\w+", "\\1"),
+        depth = as.numeric(
+            str_replace(depth, "\\D+", ""))
+        )
+
+sag_meta_location <- overview_gdv1 %>%
     mutate(
         group = "sag",
-        plate = str_replace(sample_id, "^(\\w+-\\w+)-.*$", "\\1"),
-        depth = as.numeric(
-            str_replace(depth, "\\D+", "")
-        ),
         depth_group = case_when(
             depth <= 200 ~ "epi",
             depth > 200 & depth <= 1000 ~ "meso",
@@ -38,7 +42,7 @@ sag_meta_location <- read_csv("overview_gorg_dark_v1_20221104.csv") %>%
     select(latitude, longitude, group, depth, depth_group, plate)
 
 # inclue Black Sea plate info manually
-black_sea_location <- data_frame(
+black_sea_location <- tibble(
     latitude = c(43.5320233, 43.5320233),
     longitude = c(32.5151083, 32.5151083),
     group = c("sag", "sag"),
@@ -50,6 +54,22 @@ black_sea_location <- data_frame(
 sag_meta_location <- bind_rows(
     sag_meta_location, black_sea_location
 )
+
+# export a temporary SAG overview table
+gdv3_path <- "/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/dark_v3"
+
+gdv3_files <- list.files(path = gdv3_path, full.names = FALSE)
+
+gdv3_location_depth <- tibble(sample_id = gdv3_files) %>%
+    mutate(
+        plate = str_replace(
+            sample_id, "(.*)-\\w+_contigs.*", "\\1"),
+        sample_id = str_replace(
+            sample_id, "_contigs.*", "")) %>%
+    left_join(sag_meta_location, by = "plate") %>%
+    select(-depth_group)
+
+write_csv(gdv3_location_depth, "../../sag_metadata/gdv3_location_depth.csv")
 
 # tara_metat_sample <- read_csv("metat_tara_prok_vir.csv") %>%
 #     select(sample_accessions, run_accessions) %>%
