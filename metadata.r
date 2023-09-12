@@ -197,6 +197,7 @@ df_addit <- bind_rows(
     mutate(ocean_province =
         case_when(
             plate == "AM-685" | plate == "AM-689" ~ "Black Sea",
+            plate == "AH-468" | plate == "AH-470" | plate == "AH-473" ~ "Ross Ice Shelf",
             TRUE ~ ocean_province
         )) 
 
