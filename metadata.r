@@ -2,8 +2,8 @@
 
 #todo: review and simplify the below code
 
-#! this script aims to collect public metag samples covering geographic locations widely and evenly,
-#! and the ones located within the same location cluster with metatranscriptome or surface-metag samples will have higher prority
+# this script aims to collect public metag samples covering geographic locations widely and evenly,
+# and the ones located within the same location cluster with metatranscriptome or surface-metag samples will have higher prority
 
 # cluster collected samples based on longtitude and latitude
 # reference: https://gis.stackexchange.com/questions/17638/clustering-spatial-data-in-r
@@ -11,6 +11,8 @@
 #! note 202309: adjust the aphotic zone for Black Sea plates to >45m in "addit_seas.csv" (now is "addit_seas_v2.csv")
 #! ref: https://www.frontiersin.org/articles/10.3389/fmars.2017.00090/full
 #! ref: https://www.mdpi.com/2673-1924/1/4/18
+
+#! note 202312: the metadata including metag_metat_sag_v3 contains epipelagic metag from the Indian Ocean (MR1505_SXXX_WXXXX)
 
 library(rgdal)
 library(geosphere)
@@ -301,9 +303,10 @@ full_df_addit <- cluster_df_addit %>%
     ungroup() %>%
     mutate(
         ocean_province = ifelse(
-            is.na(ocean_province), ocean_province_2, ocean_province
-        )
-    ) %>%
+            is.na(ocean_province), ocean_province_2, ocean_province),
+        ocean_province = ifelse(
+            ocean_province %in% c("Black Sea", "Ross Ice Shelf", "Baltic Sea"), NA, ocean_province)
+        ) %>%
     select(-sample_accessions, -ocean_province_2)
 
 all_dark <- full_df %>%
@@ -344,5 +347,5 @@ write_lines(unique(dark_sra_run_list$dark_sra_run_list), "all_dark_sra_run_v2.tx
 setwd("/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/frag_recruit/metadata")
 #write_csv(full_df, "metag_metat_sag_v1.csv")
 
-write_csv(full_df_addit, "metag_metat_sag_v2.csv")
+write_csv(full_df_addit, "metag_metat_sag_v3.csv")
 
