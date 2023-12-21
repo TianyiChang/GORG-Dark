@@ -30,7 +30,7 @@ get_bam_stats <- function(metag_batch) {
     }
 
     filter_list <- read_csv("../post_qc_summary/metag_post_qc_read.csv") %>%
-        filter(survived_reads < 1000000)
+        filter(survived_reads < 1000000) #! changes needed, currently throw away hadal metag
 
     stats_df <- list.files(pattern = ".bam$", full.names = FALSE) %>%
         future_map_dfr(., get_idxstats) %>%
