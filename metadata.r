@@ -13,6 +13,7 @@
 #! ref: https://www.mdpi.com/2673-1924/1/4/18
 
 #! note 202312: the metadata including metag_metat_sag_v3 contains epipelagic metag from the Indian Ocean (MR1505_SXXX_WXXXX)
+#! note 202312: lack of metag from hadal zone
 
 library(rgdal)
 library(geosphere)
