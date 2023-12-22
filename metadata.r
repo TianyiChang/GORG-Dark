@@ -305,8 +305,8 @@ full_df_addit <- cluster_df_addit %>%
     mutate(
         ocean_province = ifelse(
             is.na(ocean_province), ocean_province_2, ocean_province),
-        ocean_province = ifelse(
-            ocean_province %in% c("Black Sea", "Ross Ice Shelf", "Baltic Sea"), NA, ocean_province)
+        depth_group = ifelse(
+            ocean_province %in% c("Black Sea", "Ross Ice Shelf", "Baltic Sea"), NA, depth_group)
         ) %>%
     select(-sample_accessions, -ocean_province_2)
 
