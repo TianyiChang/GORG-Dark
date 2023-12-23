@@ -1,12 +1,9 @@
 #!/home/tchang/miniconda3/envs/shortread/bin/Rscript --vanilla
 
 library(tidyverse)
-library(ape)
-library(vegan)
-library(ggplot2)
 library(RColorBrewer)
 
-setwd("/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/frag_recruit/")
+setwd("/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/frag_recruit")
 
 possible_surface_sag <-
     read_csv("sag_surface_vs_dark/summary/surface_taxa_statistics.csv") %>%
@@ -75,12 +72,13 @@ sag_grouping <- sag_metadata %>%
 sag_grouping_2 <- sag_metadata %>%
     mutate(group_2 =
         case_when(
-            depth > 1000 & depth <= 4000 ~ "Bathy-Abysso",
+            depth > 1000 & depth <= 4000 ~ "Bathypelagic",
             depth <= 1000 & latitude > 60 ~
                 "Mesopelagic & latitude > 60",
             depth <= 1000 & latitude <= 60 ~
                 "Mesopelagic & latitude <= 60",
-            depth > 4000 ~ "Hadalpelagic"
+            depth > 4000 & depth <= 6000 ~ "Abyssopelagic",
+            depth > 6000 ~ "Hadalpelagic"
             )) %>%
     select(sag = sample_id, group_2)
 
