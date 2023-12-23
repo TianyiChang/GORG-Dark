@@ -33,12 +33,15 @@ mkdir -p $maindir/metag_wildcards/from_collab
 #     fi
 # done
 
-#! 1. manually modify the below tables without changing file names
+#! 1. update the below tables without changing file names
 head $maindir/metadata/local_metag_list.txt
 head $maindir/metadata/sra_run_list.txt
 
 notes: 20230904: remove SRR4028169 from "sra_run_list.txt", failed to split into PE files
 notes: 20230908: include 12 additional Black Sea metag after adjusting aphotic zone depth, see "metadata.r"
+notes: 20231223: include 66 representative epi metag, see "frag_recruit_select_epi_metag.r".
+#todo: After smk run from the above update [20231223]: re-run "frag_recruit_stats_depth_layer_indiv_sags.r",
+#todo: then re-run "frag_recruit_pcoa.r", then "generate_pcoa_plots_sag_abund.r"
 
 #! 2. update "ref_genomes" in "frag_recruit.smk" if adding more references
 #! add the assemblies into reference folder
