@@ -14,11 +14,24 @@ metag_depth <- metag_metadata %>%
     filter(!is.na(run_accessions)) %>% 
     distinct(run_accessions, depth_group)
 
-sag_norm_abund_depth <- sag_norm_abund %>% 
-    mutate(run_accessions = str_remove(
-        run_accessions, "_S\\d{2}_HB27filtered")
-        ) %>% # remove suffix for HB27filtered metag to be consistent with metag_metadata
-    left_join(metag_depth, by = "run_accessions")
+metag_region <- metag_metadata %>% 
+    filter(!is.na(run_accessions)) %>% 
+    distinct(run_accessions, ocean_province)
+
+sag_norm_abund_region <- sag_norm_abund %>% 
+    left_join(metag_region, by = "run_accessions")
+
+# handle inconsistent run name
+join_norm_abund_and_metadata_var <- function(metadata_var){
+    sag_norm_abund %>% 
+        mutate(run_accessions = str_remove(
+            run_accessions, "_S\\d{2}_HB27filtered")
+            ) %>% # remove suffix for HB27filtered metag to be consistent with metag_metadata
+        left_join({metadata_var}, by = "run_accessions")
+}
+
+sag_norm_abund_depth <- join_norm_abund_and_metadata_var(metag_depth)
+sag_norm_abund_region <- join_norm_abund_and_metadata_var(metag_region)
 
 #==================================================#
 ##  sanity check for metag lack depth layer info ##
@@ -26,6 +39,9 @@ sag_norm_abund_depth <- sag_norm_abund %>%
 
 run_lack_depth_in_sag_norm_abund_depth <- filter(sag_norm_abund_depth, is.na(depth_group)) %>% 
     distinct(run_accessions)
+
+run_lack_region_in_sag_norm_abund_region <- filter(sag_norm_abund_region, is.na(ocean_province)) %>% 
+    distinct(run_accessions) # pass: no region info is missing
 
 run_lack_depth_in_metadata <- filter(metag_metadata, run_accessions %in% run_lack_depth_in_sag_norm_abund_depth$run_accessions)
 
@@ -47,59 +63,131 @@ metag_missing_from_metag_metadata <- filter(run_lack_depth_in_sag_norm_abund_dep
 sag_norm_abund_depth_no_epi <- sag_norm_abund_depth %>% 
     filter(depth_group != "epi")
 
+sag_norm_abund_region_no_epi <- sag_norm_abund_region %>% 
+    semi_join(sag_norm_abund_depth_no_epi, by = "sag")
+
 sag_norm_abund_no_na_depth <- sag_norm_abund_depth_no_epi %>% 
     filter(!is.na(depth_group))
 
-sags_w_no_reads_mapped <- sag_norm_abund_no_na_depth %>%
-    group_by(sag) %>%
-    summarise(n=sum(mapped_count_perMread_perMbp)) %>%
-    ungroup() %>%
-    filter(n == "0")
+run_games_howell <- function(df, yvar, condition, stats_out, summary_out){
 
-sag_norm_abund_no_na_depth_no_zeros <-
-    sag_norm_abund_no_na_depth %>%
-    anti_join(sags_w_no_reads_mapped, by = "sag") %>% # for the test to perform properly, remove zero y-values
-    mutate(
-        sag = as.factor(sag),
-        depth_group = as.factor(depth_group),
-        mapped_n_dummy =
-            mapped_count_perMread_perMbp +
-            rnorm(length(mapped_count_perMread_perMbp), 0.005, 0.00001) # for the test to perform properly, adding a varied small value to each row
-        )
+    sags_w_no_reads_mapped <- {{df}} %>%
+        group_by(sag) %>%
+        summarise(n=sum(mapped_count_perMread_perMbp)) %>%
+        ungroup() %>%
+        filter(n == "0")
 
-#! noted: estimate = group2 - group1
-#! noted: using pvalue cutoff 0.05 to be consistent with 'frag_recruit_particle_vs_fl.r'
-games_howell_summary <- sag_norm_abund_no_na_depth_no_zeros %>%
-    group_by(sag) %>%
-    games_howell_test(mapped_n_dummy ~ depth_group, conf.level = 0.95, detailed = TRUE) %>%
-    left_join(sag_norm_abund_no_na_depth_no_zeros, by = "sag")
+    df_processed <- df %>%
+        anti_join(sags_w_no_reads_mapped, by = "sag") %>% # for the test to perform properly, remove zero y-values
+        mutate(
+            sag = as.factor(sag),
+            {{yvar}} := as.factor({{yvar}}),
+            mapped_n_dummy =
+                mapped_count_perMread_perMbp +
+                rnorm(length(mapped_count_perMread_perMbp), 0.005, 0.00001) # for the test to perform properly, adding a varied small value to each row
+            )
+    
+    #! noted: estimate = group2 - group1
+    #! noted: using pvalue cutoff 0.05 to be consistent with 'frag_recruit_particle_vs_fl.r'
+    if({{condition}} == "depth"){
+        games_howell_summary <- df_processed %>%
+            group_by(sag) %>%
+            games_howell_test(mapped_n_dummy ~ depth_group, conf.level = 0.95, detailed = TRUE) %>%
+            left_join(df_processed, by = "sag")
+    } else if ({{condition}} == "region") {
+        games_howell_summary <- df_processed %>%
+            group_by(sag) %>%
+            games_howell_test(mapped_n_dummy ~ ocean_province, conf.level = 0.95, detailed = TRUE) %>%
+            left_join(df_processed, by = "sag")
+    } else {
+       print("Condition is not existed")
+    }
 
-games_howell_signf <- games_howell_summary %>% 
-    filter(p.adj < 0.05) %>% 
-    # specify child and parent based on estimate
-    group_by(sag) %>% 
-    mutate(
-        child = ifelse(estimate > 0, group1, group2),
-        parent = ifelse(estimate > 0, group2, group1)
-    ) %>% 
-    ungroup()
+    games_howell_signf <- games_howell_summary %>% 
+        filter(p.adj < 0.05) %>% 
+        # specify child and parent based on estimate
+        group_by(sag) %>% 
+        mutate(
+            child = ifelse(estimate > 0, group1, group2),
+            parent = ifelse(estimate > 0, group2, group1)
+        ) %>% 
+        ungroup()
 
-games_howell_signf_parent <- games_howell_signf %>% 
-    distinct(sag, parent)
+    games_howell_signf_parent <- games_howell_signf %>% 
+        distinct(sag, parent)
 
-games_howell_signf_child <- games_howell_signf %>% 
-    distinct(sag, child)
+    games_howell_signf_child <- games_howell_signf %>% 
+        distinct(sag, child)
 
-# To find the highest hierarchy of depth_group, the parent should not be found in child
-major_depth_4_indiv_sags <- games_howell_signf_child %>% 
-    left_join(games_howell_signf_parent, by = "sag") %>% 
-    group_by(sag) %>% 
-    filter(!parent %in% child) %>% 
-    distinct(sag, parent) %>% 
-    mutate(multiple_major_depth = ifelse(
-        n() > 1, "yes", "no"
-    ))
+    # To find the highest hierarchy of depth/region, the parent should not be found in child
+    major_group_assigned <- games_howell_signf_child %>% 
+        left_join(games_howell_signf_parent, by = "sag") %>% 
+        group_by(sag) %>% 
+        filter(!parent %in% child) %>% 
+        distinct(sag, parent) %>% 
+        mutate(multiple_major_group = ifelse(
+                n() > 1, "yes", "no"))        
+    
+    # sort the groups
+    if({{condition}} == "depth"){
+        major_group_sorted <- major_group_assigned %>% 
+            mutate(
+                parent = factor(parent, levels = c(
+                    "meso", "bathy", "abysso", "hadal"))
+            ) %>% 
+            arrange(parent)
+    } else if ({{condition}} == "region") {
+        major_group_sorted <- major_group_assigned %>% 
+            mutate(
+                parent = factor(parent, levels = c(
+                    "North Pacific Ocean", "South Pacific Ocean",
+                    "North Atlantic Ocean", "South Atlantic Ocean",
+                    "Indian Ocean", "Arctic Ocean",
+                    "Southern Ocean", "Ross Ice Shelf",
+                    "Mediterranean Sean", "Red Sea",
+                    "Baltic Sea", "Black Sea"
+                    )) # sort the depth layer
+            ) %>% 
+            arrange(parent)
+    } else {
+       print("Condition is not existed")
+    }
 
-# export final results
-write.csv(games_howell_summary, "sag_depth_preference/sag_depth_games_howell_summary.csv")
-write_csv(major_depth_4_indiv_sags, "sag_depth_preference/major_depth_4_indiv_sags.csv")
+    major_group_4_indiv_sags <- major_group_sorted %>% 
+        # combine multiple main groups
+        mutate(major_group_index = str_c(
+            "major_group_", c(1:n())
+        )) %>% 
+        ungroup() %>% 
+        pivot_wider(
+            names_from = major_group_index,
+            values_from = parent
+            ) %>% 
+        unite(major_group, starts_with("major_group_"), remove = TRUE, sep = " - ") %>% 
+        select(sag, major_group, multiple_major_group) %>% 
+        mutate(major_group = str_remove(major_group, " - NA -.*| - NA$"))
+
+    # export final results
+    write.csv(games_howell_summary, str_c("sag_depth_region_preference/", {{stats_out}}))
+    write_csv(major_group_4_indiv_sags, str_c("sag_depth_region_preference/", {{summary_out}}))
+
+    # return(
+    #     df_list = list(
+    #         games_howell_summary = games_howell_summary,
+    #         major_depth_4_indiv_sags = major_depth_4_indiv_sags
+    #     )
+    # )
+
+}
+
+run_games_howell(
+    sag_norm_abund_no_na_depth, depth_group,
+    "depth", "sag_depth_games_howell_summary.csv",
+    "major_depth_4_indiv_sags.csv"
+    )
+
+run_games_howell(
+    sag_norm_abund_region_no_epi, ocean_province,
+    "region", "sag_region_games_howell_summary.csv",
+    "major_region_4_indiv_sags.csv"
+    )
