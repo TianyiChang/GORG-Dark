@@ -51,7 +51,7 @@ bray_pcoa <- non_zero_df %>%
     pcoa()
 
 # get eigenvalues for the two major axeses
-relative_eig <- tibble(
+relative_eigs <- tibble(
     relative_eig1 = round(bray_pcoa$values$Relative_eig[1], 2),
     relative_eig2 = round(bray_pcoa$values$Relative_eig[2], 2)
 )
