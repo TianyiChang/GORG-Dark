@@ -71,3 +71,4 @@ df_2 <- bind_cols(df, pc_1_2) %>%
     rename(PC_1 = Axis.1, PC_2 = Axis.2)
 
 write_csv(df_2, "pcoa/sag_pc1_2_values.csv")
+write_csv(relative_eigs, "pcoa/relative_eigs.csv")
