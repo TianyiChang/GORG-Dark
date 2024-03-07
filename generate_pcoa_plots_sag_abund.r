@@ -2,8 +2,263 @@
 
 library(tidyverse)
 library(RColorBrewer)
+library(janitor)
 
 setwd("/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/frag_recruit")
+
+#======================================#
+## Import group info and pcoa outputs ##
+#======================================#
+
+#1 grouping info
+pref_depth_sag <- 
+    read_csv("sag_depth_region_preference/major_depth_4_indiv_sags.csv") %>% 
+    select(sag, preferred_depth = major_group)
+
+pref_region_sag <- 
+    read_csv("sag_depth_region_preference/major_region_4_indiv_sags.csv")
+
+pa_fl_sag <-
+    read_csv("sag_PA_vs_FL/summary/statistics_w_pa_fl.csv") %>%
+    select(sag, pa_fl) %>%
+    distinct()
+
+sag_plate_depth_region <- 
+    read.csv("metadata/metag_metat_sag_v3.csv") %>%
+    filter(group == "sag") %>%
+    as_tibble() %>% 
+    select(plate, ocean_province, depth_group)
+
+sag_metadata <-
+    read_tsv("../sag_metadata/gdv3_SAG_summary_20231215.tsv") %>%
+    clean_names() %>% 
+    mutate(
+        depth = ifelse(depth == "omz", 666, depth),
+        depth = as.numeric(str_replace(depth, "m|,", "")))
+
+depth_latitude <- sag_metadata %>%
+    mutate(depth_latitude =
+        case_when(
+            depth > 1000 & depth <= 4000 ~ "Bathypelagic",
+            depth <= 1000 & latitude > 60 ~
+                "Mesopelagic & latitude > 60",
+            depth <= 1000 & latitude <= 60 ~
+                "Mesopelagic & latitude <= 60",
+            depth > 4000 & depth <= 6000 ~ "Abyssopelagic",
+            depth > 6000 ~ "Hadalpelagic"
+            )) %>%
+    select(sag, depth_latitude)
+
+get_taxonomy <- function(file) {
+    read_tsv(str_c("../gtdbtk/", {{file}})) %>%
+    select(user_genome, classification) %>%
+    mutate(sag = str_replace(user_genome, "_contigs$", ""))
+}
+
+sag_classif <- bind_rows(
+    get_taxonomy("tkv2_gdv3.ar53.summary.tsv"),
+    get_taxonomy("tkv2_gdv3.bac120.summary.tsv")
+    ) %>%
+    separate_rows(classification, sep = ";") %>%
+    select(-user_genome)
+
+sag_phylum <- sag_classif %>%
+    filter(str_detect(classification, "p__"))
+
+sag_orders <- sag_classif %>%
+    filter(str_detect(classification, "o__")) %>%
+    left_join(sag_phylum, by = "sag") %>%
+    mutate(order = str_c(
+        classification.x, " (",
+        classification.y, ")"
+    )) %>%
+    select(sag, order)
+
+sag_famlies <- sag_classif %>%
+    filter(str_detect(classification, "f__")) %>%
+    left_join(sag_orders, by = "sag") %>%
+    mutate(
+        family = str_c(
+            classification, " (", order, ")"),
+        family = str_replace(family,
+            " \\(p[^\\)]+\\)", "")
+    ) %>%
+    select(sag, family)
+
+sag_genera <- sag_classif %>%
+    filter(str_detect(classification, "g__")) %>%
+    left_join(sag_famlies, by = "sag") %>%
+    mutate(
+        genus = str_c(
+            classification, " (", family, ")"),
+        genus = str_replace(genus,
+            " \\(o[^\\)]+\\)", "")
+    ) %>%
+    select(sag, genus)
+
+# get major lineage >= 1% and 3%
+order_freq <- sag_orders %>%
+    count(order) %>%
+    arrange(-n) %>%
+    mutate(
+        prop = 100 * n / sum(n),
+        accum_prop = cumsum(prop))
+    
+order_selected <- order_freq %>%
+    filter(prop >= 1) %>%
+    left_join(sag_orders, by = "order") %>%
+    mutate(prop_cutoff =
+        ifelse(prop >= 3, "3per",
+        "1per")) %>%
+    select(sag, order, prop_cutoff)
+
+family_selected <- sag_famlies %>%
+    inner_join(order_selected, by = "sag")
+
+genus_selected <- sag_genera %>%
+    inner_join(family_selected, by = "sag")
+
+# taxonomy for all sags
+order_genus_all <- sag_genera %>%
+    left_join(sag_famlies, by = "sag") %>%
+    left_join(sag_orders, by = "sag")
+
+#2 PCoA outputs
+relative_eigs <- read_csv("pcoa/relative_eigs.csv")
+relative_eig1 <- relative_eigs$relative_eig1
+relative_eig2 <- relative_eigs$relative_eig2
+
+pc_1_2 <- read_csv("pcoa/sag_pc1_2_values.csv") %>% 
+    select(-plate)
+
+#============#
+## Join dfs ##
+#============#
+combined_df <- sag_metadata %>% 
+    select(sag) %>% 
+    mutate(plate = str_replace(sag, "(.*)-.*", "\\1")) %>% 
+    left_join(sag_plate_depth_region, by = "plate") %>% 
+    left_join(depth_latitude, by = "sag") %>% 
+    left_join(order_genus_all, by = "sag") %>% 
+    left_join(pref_depth_sag, by = "sag") %>% 
+    left_join(pc_1_2, by = "sag")
+
+#=====================#
+## Generate figures ##
+#=====================#
+
+# raw figures
+ggplot(combined_df, aes(x=PC_1, y=PC_2)) +
+    geom_point(alpha=0.6, size=0.2,
+        aes(colour=factor(ocean_province))) +
+    theme_classic() +
+    labs(x=str_c("Eig1", " (", relative_eig1, ")"),
+        y=str_c("Eig2", " (", relative_eig2, ")")) +
+    theme(
+        legend.position="bottom",
+        legend.title=element_blank(),
+        legend.text=element_text(size=7, face="bold")
+        ) +
+    guides(colour=guide_legend(
+        override.aes=list(size=5)))
+
+ggsave("pcoa/raw_figs/regions.pdf", device="pdf",
+    width=6, height=6)
+
+#2
+combined_df <- combined_df %>%
+    mutate(
+        region = 
+            case_when(
+                ocean_province == "Red Sea" ~ "Red Sea",
+                ocean_province == "Mediterranean Sea" ~ "Mediterranean Sea",
+                ocean_province == "Arctic Ocean" ~ "Arctic Ocean",
+                ocean_province == "Southern Ocean" ~ "Southern Ocean",
+                ocean_province == "Southern Ocean" ~ "Southern Ocean",
+                ocean_province == "Baltic Sea" ~ "Baltic Sea",
+                ocean_province == "Black Sea" ~ "Black Sea",
+                TRUE ~ "Open oceans"
+            ),
+        region = factor(region, levels = c("Open oceans", "Mediterranean Sea", "Red Sea",
+            "Southern Ocean", "Arctic Ocean", "Baltic Sea", "Black Sea")),
+        depth_latitude = factor(depth_latitude, levels = c(
+            "Mesopelagic & latitude <= 60",
+            "Mesopelagic & latitude > 60",
+            "Bathypelagic", "Abyssopelagic", "Hadalpelagic"
+            )),
+        preferred_depth = factor(preferred_depth, levels = c(
+            "meso", "bathy", "abysso",
+            "meso - bathy", "bathy - abysso"))
+    )
+
+combined_df_1 <- mutate(combined_df, region = factor(region, ordered = TRUE)) %>%
+    arrange(region)
+
+ggplot(combined_df_1, aes(x=PC_1, y=PC_2)) +
+    geom_point(alpha=0.7, size=1.2, pch=21,
+        aes(colour=region, fill=depth_latitude)) +
+    scale_color_manual(values=
+        brewer.pal(n = 8, name = "Paired")) +
+    scale_fill_manual(values=c("transparent", "gray", "#660000", "black", "red")) +
+    theme_classic() +
+    labs(x=str_c("Eig1", " (", relative_eig1, ")"),
+        y=str_c("Eig2", " (", relative_eig2, ")")) +
+    theme(
+        legend.position="bottom",
+        legend.text=element_text(size=6, face="bold"),
+        legend.title=element_blank()
+        ) +
+    guides(
+        col=guide_legend(
+            nrow=5,
+            override.aes=list(size=4.5)),
+        fill=guide_legend(
+            nrow=5,
+            override.aes=list(size=4.5)),
+    )
+
+ggsave("pcoa/raw_figs/pcoa_region_depth_latitude.pdf", device="pdf",
+    width=6.5, height=6.5)
+
+combined_df_2 <- mutate(combined_df, preferred_depth = factor(preferred_depth, ordered = TRUE)) %>%
+    arrange(preferred_depth)
+
+ggplot(combined_df_2, aes(x=PC_1, y=PC_2)) +
+    geom_point(alpha=0.7, size=1.2, shape=21,
+        aes(fill=preferred_depth, colour=preferred_depth)) +
+    scale_fill_manual(values=
+        brewer.pal(n = 6, name = "Paired"), na.value = "white") +
+    scale_color_manual(values=
+        brewer.pal(n = 6, name = "Paired"), na.value = "gray") +
+    theme_classic() +
+    labs(x=str_c("Eig1", " (", relative_eig1, ")"),
+        y=str_c("Eig2", " (", relative_eig2, ")")) +
+    theme(
+        legend.position="bottom",
+        legend.text=element_text(size=6, face="bold"),
+        legend.title=element_blank()
+        ) +
+    guides(
+        fill=guide_legend(
+            nrow=5,
+            override.aes=list(size=4.5)),
+    )
+
+ggsave("pcoa/raw_figs/pcoa_preferred_depth.pdf", device="pdf",
+    width=6.5, height=6.5)
+
+
+
+
+
+
+
+
+
+
+#=======================#
+## Old version of code ##
+#=======================#
 
 possible_surface_sag <-
     read_csv("sag_surface_vs_dark/summary/surface_taxa_statistics.csv") %>%
