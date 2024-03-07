@@ -69,6 +69,8 @@ sag_norm_abund_region_no_epi <- sag_norm_abund_region %>%
 sag_norm_abund_no_na_depth <- sag_norm_abund_depth_no_epi %>% 
     filter(!is.na(depth_group))
 
+#todo: Add a minimal mapped_count_perMread_perMbp cutoff
+#todo: e.g., the min mapped_count_perMread_perMbp for the SAGs with significant pair
 run_games_howell <- function(df, yvar, condition, stats_out, summary_out){
 
     sags_w_no_reads_mapped <- {{df}} %>%
