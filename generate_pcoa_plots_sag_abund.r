@@ -148,24 +148,8 @@ combined_df <- sag_metadata %>%
 #=====================#
 
 # raw figures
-ggplot(combined_df, aes(x=PC_1, y=PC_2)) +
-    geom_point(alpha=0.6, size=0.2,
-        aes(colour=factor(ocean_province))) +
-    theme_classic() +
-    labs(x=str_c("Eig1", " (", relative_eig1, ")"),
-        y=str_c("Eig2", " (", relative_eig2, ")")) +
-    theme(
-        legend.position="bottom",
-        legend.title=element_blank(),
-        legend.text=element_text(size=7, face="bold")
-        ) +
-    guides(colour=guide_legend(
-        override.aes=list(size=5)))
 
-ggsave("pcoa/raw_figs/regions.pdf", device="pdf",
-    width=6, height=6)
-
-#2
+# add factors: region, depth_latitude, preferred depth, open_oceans
 combined_df <- combined_df %>%
     mutate(
         region = 
@@ -188,7 +172,21 @@ combined_df <- combined_df %>%
             )),
         preferred_depth = factor(preferred_depth, levels = c(
             "meso", "bathy", "abysso",
-            "meso - bathy", "bathy - abysso"))
+            "meso - bathy", "bathy - abysso")),
+        open_oceans = 
+            case_when(
+                ocean_province == "North Pacific Ocean" ~ "North Pacific Ocean",
+                ocean_province == "South Pacific Ocean" ~ "South Pacific Ocean",
+                ocean_province == "North Atlantic Ocean" ~ "North Atlantic Ocean",
+                ocean_province == "South Atlantic Ocean" ~ "South Atlantic Ocean",
+                ocean_province == "Indian Ocean" ~ "Indian Ocean",
+                TRUE ~ "Others"
+            ),
+        open_oceans = factor(open_oceans, levels = c(
+            "North Pacific Ocean", "South Pacific Ocean",
+            "North Atlantic Ocean", "South Atlantic Ocean",
+            "Indian Ocean", "Others"
+        ))
     )
 
 combined_df_1 <- mutate(combined_df, region = factor(region, ordered = TRUE)) %>%
@@ -245,6 +243,31 @@ ggplot(combined_df_2, aes(x=PC_1, y=PC_2)) +
     )
 
 ggsave("pcoa/raw_figs/pcoa_preferred_depth.pdf", device="pdf",
+    width=6.5, height=6.5)
+
+
+ggplot(combined_df, aes(x=PC_1, y=PC_2)) +
+    geom_point(alpha=0.7, size=1.2, shape=21,
+        aes(fill=open_oceans, colour=open_oceans)) +
+    scale_fill_manual(values=
+        c(brewer.pal(n = 5, name = "Paired"), "white"), na.value = "white") +
+    scale_color_manual(values=
+        c(brewer.pal(n = 5, name = "Paired"), "gray"), na.value = "gray") +
+    theme_classic() +
+    labs(x=str_c("Eig1", " (", relative_eig1, ")"),
+        y=str_c("Eig2", " (", relative_eig2, ")")) +
+    theme(
+        legend.position="bottom",
+        legend.text=element_text(size=6, face="bold"),
+        legend.title=element_blank()
+        ) +
+    guides(
+        fill=guide_legend(
+            nrow=5,
+            override.aes=list(size=4.5)),
+    )
+
+ggsave("pcoa/raw_figs/pcoa_open_oceans.pdf", device="pdf",
     width=6.5, height=6.5)
 
 
