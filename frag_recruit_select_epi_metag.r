@@ -12,7 +12,7 @@ library(RColorBrewer)
 #########################################
 
 setwd("/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/frag_recruit")
-full_df <- read_csv("metadata/metag_metat_sag_v3.csv")
+full_df <- read_csv("metadata/metag_metat_sag_v4.csv")
 
 epi_df <- full_df %>%
     filter(depth_group == "epi" &
@@ -32,7 +32,7 @@ mdist <- distm(xy)
 hc <- hclust(as.dist(mdist), method="complete")
 
 # define the distance threshold, d is meter, (277.8 KM = 150 Nautical Miles)
-d=1200000
+d=100000
 
 # define clusters based on a tree "height" cutoff "d" and add them to the SpDataFrame
 epi_df$clust <- cutree(hc, h=d)
