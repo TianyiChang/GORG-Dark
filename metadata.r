@@ -89,6 +89,7 @@ get_info_from_run_selector <- function(file) {
             group = case_when(
                 BioProject == "PRJNA289734" ~ "uncollected",
                 BioProject == "PRJNA305355" ~ "uncollected",
+                BioProject == "PRJEB52452" ~ "uncollected", #! modify everytime at a new metag metadata table
                 TRUE ~ "metat"
             ),
             depth = as.numeric(str_replace(depth, "^\\w+-(\\w+)$", "\\1")),
@@ -348,5 +349,5 @@ write_lines(unique(dark_sra_run_list$dark_sra_run_list), "all_dark_sra_run_v2.tx
 setwd("/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/frag_recruit/metadata")
 #write_csv(full_df, "metag_metat_sag_v1.csv")
 
-write_csv(full_df_addit, "metag_metat_sag_v3.csv")
+write_csv(full_df_addit, "metag_metat_sag_v4.csv")
 
