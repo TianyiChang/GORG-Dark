@@ -32,7 +32,8 @@ mdist <- distm(xy)
 hc <- hclust(as.dist(mdist), method="complete")
 
 # define the distance threshold, d is meter, (277.8 KM = 150 Nautical Miles)
-d=100000
+#! 20240401: change to '0', now only derep for longi latitude
+d=0
 
 # define clusters based on a tree "height" cutoff "d" and add them to the SpDataFrame
 epi_df$clust <- cutree(hc, h=d)
