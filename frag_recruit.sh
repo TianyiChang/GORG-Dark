@@ -8,6 +8,12 @@ mkdir -p $maindir/result_4_sra_metag/snakefiles
 mkdir -p $maindir/result_4_sra_metag/envs
 mkdir -p $maindir/result_4_local_metag/snakefiles
 mkdir -p $maindir/result_4_local_metag/envs
+mkdir -p $maindir/result_4_local_maria_cariaco_metag/snakefiles
+mkdir -p $maindir/result_4_local_maria_cariaco_metag/envs
+mkdir -p $maindir/result_4_sra_dark_sunlit/snakefiles
+mkdir -p $maindir/result_4_sra_dark_sunlit/envs
+mkdir -p $maindir/result_4_local_dark_sunlit/snakefiles
+mkdir -p $maindir/result_4_local_dark_sunlit/envs
 
 mkdir -p $maindir/metag/from_collab
 mkdir -p $maindir/reference
@@ -37,11 +43,14 @@ mkdir -p $maindir/metag_wildcards/from_collab
 head $maindir/metadata/local_metag_list.txt
 head $maindir/metadata/sra_run_list.txt
 
-notes: 20230904: remove SRR4028169 from "sra_run_list.txt", failed to split into PE files
-notes: 20230908: include 12 additional Black Sea metag after adjusting aphotic zone depth, see "metadata.r"
-notes: 20231223: include 66 representative epi metag, see "frag_recruit_select_epi_metag.r".
+# notes: 20230904: remove SRR4028169 from "sra_run_list.txt", failed to split into PE files
+# notes: 20230908: include 12 additional Black Sea metag after adjusting aphotic zone depth, see "metadata.r"
+# notes: 20231223: include 66 representative epi metag, see "frag_recruit_select_epi_metag.r".
 #todo: After smk run from the above update [20231223]: re-run "frag_recruit_stats_depth_layer_indiv_sags.r",
 #todo: then re-run "frag_recruit_pcoa.r", then "generate_pcoa_plots_sag_abund.r"
+
+# notes: 20240401: [before] sra_run_list.txt contains 320 dark ocean metag. [now] add 263 dark ocean metag from 2024 malaspina metag, add 278 latitude longitude derep surface metag 
+# notes: 20240401: [now] sra_run_list.txt contains 861 dark and surface sra run
 
 #! 2. update "ref_genomes" in "frag_recruit.smk" if adding more references
 #! add the assemblies into reference folder
@@ -51,6 +60,10 @@ cat $maindir/../dark_v3/*.fasta | \
     sed 's/_contig/_NODE_/' > $maindir/reference/gorg_v3_concat.fa
 
 gzip $maindir/reference/gorg_v3_concat.fa
+
+# 20240401: combine gorg-tropics and gorg-dark
+cat $maindir/reference/gorg_v3_concat.fa.gz \
+    $maindir/reference/outside_gorg_tropics.fa.gz > $maindir/reference/gorg_v3_tropics.fa.gz
 
 ########################################
 # re-organizing file and code systems ##
@@ -76,14 +89,14 @@ for i in $(ls $maindir/metag/from_collab/*_R2.fq.gz | sed 's/_R2.fq.gz//'); do
 done
 
 # create conda envs
-conda env export --name sra-tools --file $maindir/result_4_metag/envs/sra_tools.yml
-conda env export --name pigz --file $maindir/result_4_metag/envs/pigz.yml
-#conda env export --name trimmomatic --file $maindir/result_4_metag/envs/trimmomatic.yml
-conda env export --name flash --file $maindir/result_4_metag/envs/flash.yml
-conda env export --name seqtk --file $maindir/result_4_metag/envs/seqtk.yml
-conda env export --name bwa_snake --file $maindir/result_4_metag/envs/bwa_snake.yml
-conda env export --name blast_2.13 --file $maindir/result_4_metag/envs/blast.yml
-conda env export --name barrnap --file $maindir/result_4_metag/envs/barrnap.yml
+conda env export --name sra-tools --file $maindir/result_4_local_dark_sunlit/envs/sra_tools.yml
+conda env export --name pigz --file $maindir/result_4_local_dark_sunlit/envs/pigz.yml
+#conda env export --name trimmomatic --file $maindir/result_4_local_dark_sunlit/envs/trimmomatic.yml
+conda env export --name flash --file $maindir/result_4_local_dark_sunlit/envs/flash.yml
+conda env export --name seqtk --file $maindir/result_4_local_dark_sunlit/envs/seqtk.yml
+conda env export --name bwa_snake --file $maindir/result_4_local_dark_sunlit/envs/bwa_snake.yml
+conda env export --name blast_2.13 --file $maindir/result_4_local_dark_sunlit/envs/blast.yml
+conda env export --name barrnap --file $maindir/result_4_local_dark_sunlit/envs/barrnap.yml
 
 ###############
 ## SNAKEMAKE ##
@@ -110,6 +123,7 @@ snakemake -s frag_recruit_local.smk --use-conda \
 -j 200 --latency-wait 120 --keep-going
 
 #! 2. RUN 4 sra metagenomes
+#! noted 20240401: next time run for the below codes, the metag analyzed will be changed (now it includes malaspina and sunlit ocean metag)
 conda activate snakemake
 
 cp $codedir/frag_recruit_sra.smk $maindir/result_4_sra_metag/snakefiles
@@ -128,3 +142,67 @@ snakemake -n -s frag_recruit_sra.smk --rerun-triggers mtime
 snakemake -s frag_recruit_sra.smk --use-conda \
 --cluster 'qsub -q low -l ncpus={threads},mem={resources.mem_mb},walltime=48:10:00' \
 -j 200 --latency-wait 120 --keep-going --rerun-triggers mtime
+
+#! 3. RUN 4 local maria's Cariaco metagenomes
+conda activate snakemake
+
+cp $codedir/frag_recruit_local_maria_cariaco.smk $maindir/result_4_local_maria_cariaco_metag/snakefiles
+cd $maindir/result_4_local_maria_cariaco_metag/snakefiles
+
+snakemake -s frag_recruit_local_maria_cariaco.smk --rulegraph | dot -Tpdf > frag_recruit_local_maria_cariaco_dag.pdf
+
+# dry run
+snakemake -n -s frag_recruit_local_maria_cariaco.smk --rerun-triggers mtime
+
+# using cluster
+# option: --keep-going: do not stop if some of the jobs failed
+# option: --rerun-triggers mtime: do not want to re-run jobs after changing contents in some rules)
+# option:  --rerun-incomplete
+
+snakemake -s frag_recruit_local_maria_cariaco.smk --use-conda \
+--cluster 'qsub -q low -l ncpus={threads},mem={resources.mem_mb}mb,walltime=48:10:00' \
+-j 200 --latency-wait 120 --keep-going --rerun-triggers mtime
+
+
+#! 4. RUN 4 dark and sunlit sra metagenomes with gorgd and gorgt
+conda activate snakemake
+
+cp $codedir/frag_recruit_sra_dark_sunlit.smk $maindir/result_4_sra_dark_sunlit/snakefiles
+cd $maindir/result_4_sra_dark_sunlit/snakefiles
+
+snakemake -s frag_recruit_sra_dark_sunlit.smk --rulegraph | dot -Tpdf > frag_recruit_sra_dark_sunlit_dag.pdf
+
+# dry run
+snakemake -n -s frag_recruit_sra_dark_sunlit.smk --rerun-triggers mtime
+
+# using cluster
+# option: --keep-going: do not stop if some of the jobs failed
+# option: --rerun-triggers mtime: do not want to re-run jobs after changing contents in some rules)
+# option:  --rerun-incomplete
+
+snakemake -s frag_recruit_sra_dark_sunlit.smk --use-conda \
+--cluster 'qsub -q low -l ncpus={threads},mem={resources.mem_mb}mb,walltime=48:10:00' \
+-j 200 --latency-wait 120 --keep-going --rerun-triggers mtime
+
+#todo: after finish #4, re-run #1 but change reference to 'gorg_v3_tropics.fa.gz' in frag_recruit_local.smk to be compatible with #4
+
+#! 5. RUN 4 dark and sunlit local metagenomes with gorgd and gorgt
+conda activate snakemake
+
+cp $codedir/frag_recruit_local_dark_sunlit.smk $maindir/result_4_local_dark_sunlit/snakefiles
+cd $maindir/result_4_local_dark_sunlit/snakefiles
+
+snakemake -s frag_recruit_local_dark_sunlit.smk --rulegraph | dot -Tpdf > frag_recruit_sra_localk_sunlit_dag.pdf
+
+# dry run
+snakemake -n -s frag_recruit_local_dark_sunlit.smk --rerun-triggers mtime
+
+# using cluster
+# option: --keep-going: do not stop if some of the jobs failed
+# option: --rerun-triggers mtime: do not want to re-run jobs after changing contents in some rules)
+# option:  --rerun-incomplete
+
+snakemake -s frag_recruit_local_dark_sunlit.smk --use-conda \
+--cluster 'qsub -q low -l ncpus={threads},mem={resources.mem_mb}mb,walltime=48:10:00' \
+-j 200 --latency-wait 120 --keep-going --rerun-triggers mtime
+
