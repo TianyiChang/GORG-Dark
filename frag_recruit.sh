@@ -184,7 +184,6 @@ snakemake -s frag_recruit_sra_dark_sunlit.smk --use-conda \
 --cluster 'qsub -q low -l ncpus={threads},mem={resources.mem_mb}mb,walltime=48:10:00' \
 -j 200 --latency-wait 120 --keep-going --rerun-triggers mtime
 
-#todo: after finish #4, re-run #1 but change reference to 'gorg_v3_tropics.fa.gz' in frag_recruit_local.smk to be compatible with #4
 
 #! 5. RUN 4 dark and sunlit local metagenomes with gorgd and gorgt
 conda activate snakemake
