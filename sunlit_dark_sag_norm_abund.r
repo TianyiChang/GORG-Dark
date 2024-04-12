@@ -47,7 +47,7 @@ get_bam_stats <- function(metag_batch) {
         summarise(mapped_reads = sum(mapped)) %>%
         ungroup() %>% 
         filter(sag != "*") %>%
-        left_join(metag_total_reads, by = "run_accessions") # remove results for metag with < 1M reads (the n used for rarefy)
+        left_join(metag_total_reads, by = "run_accessions")
 
     return(stats_df)
 
