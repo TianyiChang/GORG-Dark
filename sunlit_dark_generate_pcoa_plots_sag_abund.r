@@ -6,6 +6,9 @@ library(janitor)
 
 setwd("/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/frag_recruit")
 
+#! noted: baltic, black, ross metag were excluded for frag_recruit analyses due to atypical depth layer
+#! noted: NAs in PC values derived from SAGs with few reads mapped to the analyzed metag
+
 #! noted: for a few SAGs (e.g., 'AG-919-M03' and 'AG-908-G06'), they were defined as 'meso' SAGs but embeded in epi sag cloud in the pcoa plot
 #! noted: these SAGs have really high relative abundance in some epi samples but absence in others, therefore the difference is not significant.
 
