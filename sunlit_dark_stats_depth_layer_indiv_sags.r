@@ -95,13 +95,11 @@ run_games_howell <- function(df, yvar, condition, stats_out, summary_out) {
     if({{condition}} == "depth") {
         games_howell_summary <- df_processed %>%
             group_by(sag) %>%
-            games_howell_test(mapped_n_dummy ~ depth_group, conf.level = 0.95, detailed = TRUE) %>%
-            left_join(df_processed, by = "sag")
+            games_howell_test(mapped_n_dummy ~ depth_group, conf.level = 0.95, detailed = TRUE)
     } else if ({{condition}} == "region") {
         games_howell_summary <- df_processed %>%
             group_by(sag) %>%
-            games_howell_test(mapped_n_dummy ~ ocean_province, conf.level = 0.95, detailed = TRUE) %>%
-            left_join(df_processed, by = "sag")
+            games_howell_test(mapped_n_dummy ~ ocean_province, conf.level = 0.95, detailed = TRUE)
     } else {
        print("Condition is not existed")
     }
