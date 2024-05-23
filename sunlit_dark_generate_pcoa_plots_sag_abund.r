@@ -6,6 +6,9 @@ library(janitor)
 
 setwd("/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/frag_recruit")
 
+#! noted: for a few SAGs (e.g., 'AG-919-M03' and 'AG-908-G06'), they were defined as 'meso' SAGs but embeded in epi sag cloud in the pcoa plot
+#! noted: these SAGs have really high relative abundance in some epi samples but absence in others, therefore the difference is not significant.
+
 #======================================#
 ## Import group info and pcoa outputs ##
 #======================================#
@@ -114,6 +117,24 @@ gd_depth_pc_df <- gd_sag_metadata %>%
 
 gd_gt_depth_pc_df <- pref_depth_sag %>% 
     left_join(pc_1_2, by = "sag")
+
+# baltic sea, black sea, ross ice shelf gd sags were missing from 'pref_depth_sag',
+# add these sags from gd_sag_metadata
+gd_gt_depth_pc_df <- gd_depth_pc_df %>% 
+    select(sag, preferred_depth, plate, PC_1, PC_2) %>% 
+    bind_rows(gd_gt_depth_pc_df) %>% 
+    distinct()
+
+# append "depth_niche" column to sag metadata
+v4_SAG_summary <- read_csv(
+    "../sag_metadata/v4_SAG_summary_20240320.csv") %>%
+    left_join(pref_depth_sag, by = c("SAG" = "sag")) %>% 
+    mutate(niche_depth = ifelse(
+        is.na(preferred_depth), "rare_in_metag", preferred_depth
+    )) %>% 
+    select(-preferred_depth)
+
+write_csv(v4_SAG_summary, "../sag_metadata/v5_SAG_summary_20240523.csv")
 
 #=====================#
 ## Generate figures ##
