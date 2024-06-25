@@ -19,7 +19,14 @@ setwd("/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/frag_recruit")
 #1 grouping info
 pref_depth_sag <- 
     read_csv("sag_depth_region_preference/sunlit_dark_major_depth_4_indiv_sags.csv") %>% 
-    select(sag, preferred_depth = major_group)
+    select(sag, preferred_depth = major_group) %>% 
+    mutate(
+        preferred_depth = str_replace(preferred_depth, "epi", "EPI"),
+        preferred_depth = str_replace(preferred_depth, "meso", "MES"),
+        preferred_depth = str_replace(preferred_depth, "bathy", "BAT"),
+        preferred_depth = str_replace(preferred_depth, "abysso", "ABY"),
+        preferred_depth = str_replace(preferred_depth, "hadal", "HAD"),
+        preferred_depth = str_replace_all(preferred_depth, " - ", "-"))
 
 gd_sag_metadata <-
     read_csv("../sag_metadata/v4_SAG_summary_20240320.csv") %>%
@@ -129,25 +136,44 @@ gd_gt_depth_pc_df <- gd_depth_pc_df %>%
     distinct()
 
 # append "depth_niche" column to sag metadata
+major_pref_depth <- gd_depth_pc_df %>% 
+    count(preferred_depth) %>% 
+    mutate(perc = 100 * n /sum(n)) %>% 
+    arrange(-perc) %>% 
+    filter(n >= 50)
+
+pref_depth_sag_filtered <- pref_depth_sag %>% 
+    semi_join(
+        major_pref_depth, by = "preferred_depth")
+
 v4_SAG_summary <- read_csv(
     "../sag_metadata/v4_SAG_summary_20240320.csv") %>%
-    left_join(pref_depth_sag, by = c("SAG" = "sag")) %>% 
+    left_join(pref_depth_sag_filtered, by = c("SAG" = "sag")) %>% 
     mutate(niche_depth = ifelse(
         is.na(preferred_depth), "rare_in_metag", preferred_depth
     )) %>% 
     select(-preferred_depth)
 
-write_csv(v4_SAG_summary, "../sag_metadata/v5_SAG_summary_20240523.csv")
+#todo: append "doubling_hours" column to sag metadata
+grodon <- read_tsv("../grodon/gorgd_grodon_combined.tsv") %>% 
+    select(SAG = genome, doubling_hours = d)
+
+v4_SAG_summary <- v4_SAG_summary %>% 
+    left_join(grodon, by = "SAG")
+
+write_csv(v4_SAG_summary, "../sag_metadata/v5_SAG_summary_20240625.csv")
 
 #=====================#
 ## Generate figures ##
 #=====================#
 
 #! noted: check whether the fct_level is correct for 'major_pref_depth'
+#todo: change names to EPI, MES...
+
 fct_level = c(
-    "epi", "epi - meso", "meso", "meso - bathy",
-    "meso - bathy - abysso", "bathy", "bathy - abysso",
-    "bathy - hadal", "abysso", "abysso - hadal", "hadal")
+    "EPI", "EPI-MES", "MES", "MES-BAT",
+    "BAT", "MES-BAT-ABY", "BAT-ABY",
+    "ABY", "ABY-HAD", "HAD")
 
 # raw figures
 generate_pcoa_figs <- function(input_df, outfile) {
@@ -157,11 +183,10 @@ generate_pcoa_figs <- function(input_df, outfile) {
         count(preferred_depth) %>% 
         mutate(perc = 100 * n /sum(n)) %>% 
         arrange(-perc) %>% 
-        filter(n >= 20)
+        filter(n >= 50)
 
     filtered_depth_pc_df <- {{input_df}} %>% 
         filter(preferred_depth %in% major_pref_depth$preferred_depth)
-
 
     # add factors: region, depth_latitude, preferred depth, open_oceans
     filtered_depth_pc_df <- filtered_depth_pc_df %>%
@@ -177,6 +202,7 @@ generate_pcoa_figs <- function(input_df, outfile) {
 
     colour_count <- length(
         unique(filtered_depth_pc_df$preferred_depth))
+    #? Spectral (11) or Paired (12)
     getPalette = colorRampPalette(brewer.pal(12, "Paired"))
 
     ggplot(filtered_depth_pc_df, aes(x=PC_1, y=PC_2)) +
@@ -189,11 +215,11 @@ generate_pcoa_figs <- function(input_df, outfile) {
             y=str_c("Eig2", " (", relative_eig2, ")")) +
         theme(
             legend.position="bottom",
-            legend.text=element_text(size=6.3, face="bold"),
+            legend.text=element_text(size=8, face="bold"),
             legend.title=element_blank()
             ) +
         guides(colour=guide_legend(
-            nrow=5,byrow=TRUE,
+            nrow=2,byrow=TRUE,
             override.aes=list(size=4.5)))
 
     path <- "/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/frag_recruit/pcoa/raw_figs/"
