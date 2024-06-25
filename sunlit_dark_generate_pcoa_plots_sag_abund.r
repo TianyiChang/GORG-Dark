@@ -154,14 +154,30 @@ v4_SAG_summary <- read_csv(
     )) %>% 
     select(-preferred_depth)
 
-#todo: append "doubling_hours" column to sag metadata
+# append "doubling_hours" column to sag metadata
 grodon <- read_tsv("../grodon/gorgd_grodon_combined.tsv") %>% 
     select(SAG = genome, doubling_hours = d)
 
 v4_SAG_summary <- v4_SAG_summary %>% 
     left_join(grodon, by = "SAG")
 
-write_csv(v4_SAG_summary, "../sag_metadata/v5_SAG_summary_20240625.csv")
+#! check inconsistent depth layers
+v4_SAG_summary <- v4_SAG_summary %>% 
+    mutate(
+        depth = parse_number(depth),
+        sampling_layer = case_when(
+            ocean_province == "Black Sea" | ocean_province == "Baltic Sea" | ocean_province == "Ross Ice Shelf" | depth == "omz" | niche_depth == "rare_in_metag" ~ "",
+            depth <= 200 ~ "EPI",
+            depth > 200 & depth <= 1000 ~ "MES",
+            depth > 1000 & depth <= 4000 ~ "BAT",
+            depth > 4000 & depth <= 6000 ~ "ABY",
+            depth > 6000 ~ "HAD"),
+        sampling_layer_niche_depth_mismatch = ifelse(
+            str_detect(niche_depth, sampling_layer), "N", "Y"
+    ))
+
+write_csv(v4_SAG_summary, "../sag_metadata/v5_SAG_summary_20240625_mismatch.csv")
+
 
 #=====================#
 ## Generate figures ##
