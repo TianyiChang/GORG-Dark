@@ -14,6 +14,7 @@
 
 #! note 202312: the metadata including metag_metat_sag_v3 contains epipelagic metag from the Indian Ocean (MR1505_SXXX_WXXXX)
 #! note 202312: lack of metag from hadal zone (potential sources: 'https://microbiomejournal.biomedcentral.com/articles/10.1186/s40168-019-0652-3#Sec9'; 'https://microbiomejournal.biomedcentral.com/articles/10.1186/s40168-023-01618-7#Sec11')
+#! note 202406: manually add mariana trench metag (see 'liu_jiwen_2023_microbiome_tables1.xlsx') info into metag_metat_sag_v4.csv
 
 library(rgdal)
 library(geosphere)
