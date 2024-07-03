@@ -29,7 +29,7 @@ pref_depth_sag <-
         preferred_depth = str_replace_all(preferred_depth, " - ", "-"))
 
 gd_sag_metadata <-
-    read_csv("../sag_metadata/v4_SAG_summary_20240320.csv") %>%
+    read_csv("../sag_metadata/v3_SAG_summary_20240320.csv") %>%
     clean_names() %>% 
     mutate(
         depth = ifelse(depth == "omz", 666, depth),
@@ -147,7 +147,7 @@ pref_depth_sag_filtered <- pref_depth_sag %>%
         major_pref_depth, by = "preferred_depth")
 
 v4_SAG_summary <- read_csv(
-    "../sag_metadata/v4_SAG_summary_20240320.csv") %>%
+    "../sag_metadata/v3_SAG_summary_20240320.csv") %>%
     left_join(pref_depth_sag_filtered, by = c("SAG" = "sag")) %>% 
     mutate(niche_depth = ifelse(
         is.na(preferred_depth), "rare_in_metag", preferred_depth
@@ -176,7 +176,7 @@ v4_SAG_summary <- v4_SAG_summary %>%
             str_detect(niche_depth, sampling_layer), "N", "Y"
     ))
 
-write_csv(v4_SAG_summary, "../sag_metadata/v5_SAG_summary_20240625_mismatch.csv")
+write_csv(v4_SAG_summary, "../sag_metadata/v4_SAG_summary_20240625_mismatch.csv")
 
 
 #=====================#

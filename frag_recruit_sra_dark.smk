@@ -2,7 +2,7 @@
 
 import pandas as pd
 
-run_id_table = pd.read_table('../../metadata/sra_run_list.txt')
+run_id_table = pd.read_table('../../metadata/sra_run_list_dark_only.txt')
 sra_run_ids = list(run_id_table.ids)
 
 # metag_full_list = pd.read_table('../../metadata/metag_full_list.txt')
@@ -15,7 +15,9 @@ sag_id, = glob_wildcards("../../low_entropy/test/gd_sags/{sag}.fasta")
 bac_id, = glob_wildcards("../../low_entropy/sags/bac/{bac}.fasta")
 arc_id, = glob_wildcards("../../low_entropy/sags/arc/{arc}.fasta")
 
-ref_genomes = ['gorg_v4_tropics', 'outside_omd_mags', 'outside_acinas_2020']
+ref_genomes = [
+    'outside_gorg_tropics', 'outside_omd_mags', 'outside_acinas_2020',
+    'gorg_v4_concat', 'gorg_v4_omd']
 
 rule all:
     input:
@@ -551,40 +553,3 @@ rule combine:
         echo "run_accessions,n_mapped_reads" > {output.mapped_final}; \
             cat {input.mapped} >> {output.mapped_final}
         """
-
-#! below: summarizing the number of post-qc read
-# rule count_prior_rarefy:
-#     input:
-#         "../merged/{sra}.extendedFrags.fastq.gzip"
-#     output:
-#         temp("../{ref_genomes}/post_qc_summary/{sra}_read_count.csv")
-#     params:
-#         tmpdir="../{ref_genomes}/post_qc_tmp",
-#         tmpdir1="../{ref_genomes}/post_qc_tmp/from_sra",
-#         tmpdir2="../{ref_genomes}/post_qc_tmp/from_collab",
-#         mem="5g"
-#     resources:
-#     threads: 1
-#     shell:
-#         """
-#         mkdir -p {params.tmpdir1} {params.tmpdir2}
-#         gunzip -c {input} | wc -l > {params.tmpdir}/{wildcards.sra}_read_count.txt && \
-#         awk '{{ print FILENAME","$0/4 }}' {params.tmpdir}/{wildcards.sra}_read_count.txt | \
-#         sed 's/.*\///g' | sed 's/_.*,/,/' > {output}  && \
-#         rm {params.tmpdir}/{wildcards.sra}_read_count.txt
-#         """
-
-# rule combine_prior_rarefy:
-#     input:
-#         expand("../{{ref_genomes}}/post_qc_summary/{sra}_read_count.csv",
-#             sra=sra_run_ids)
-#     output:
-#         "../{ref_genomes}/post_qc_summary/metag_post_qc_read.csv"
-#     resources:
-#     threads: 1
-#     params: mem="1g"
-#     shell:
-#         """
-#         echo "run_accessions,survived_reads" > {output}; \
-#         cat {input} >> {output}
-#         """

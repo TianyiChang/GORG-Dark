@@ -12,7 +12,7 @@ sag_id, = glob_wildcards("../../low_entropy/test/gd_sags/{sag}.fasta")
 bac_id, = glob_wildcards("../../low_entropy/sags/bac/{bac}.fasta")
 arc_id, = glob_wildcards("../../low_entropy/sags/arc/{arc}.fasta")
 
-ref_genomes = ['gorg_v3_tropics', 'outside_omd_mags', 'outside_acinas_2020']
+ref_genomes = ['gorg_v4_tropics', 'outside_omd_mags', 'outside_acinas_2020']
 
 rule all:
     input:
