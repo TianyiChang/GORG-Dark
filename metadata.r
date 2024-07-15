@@ -275,6 +275,13 @@ full_df <- cluster_all %>%
     select(-sample_accessions) %>%
     ungroup()
 
+
+#! lat lon for special region
+# lat >= -86 & lat <= -78 & lon <= -170  ~ "ross",
+# lat >= -86 & lat <= -78 & lon >= 160  ~ "ross",
+# lat >= 54 & lat <= 66 & lon >= 10 & lon <= 30  ~ "balticsea",
+# lat >= 41 & lat <= 45 & lon >= 27 & lon <= 41  ~ "blacksea"
+
 full_df_addit <- cluster_df_addit %>%
     group_by(clust) %>%
     mutate(
