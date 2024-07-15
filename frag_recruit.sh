@@ -190,8 +190,6 @@ snakemake -s frag_recruit_local_maria_cariaco.smk --use-conda \
 -j 200 --latency-wait 120 --keep-going --rerun-triggers mtime
 
 
-#todo: rerun the below after including more hadal metag and with gdv4
-#todo: running
 #! 4. RUN 4 dark and sunlit sra metagenomes with gorgd and gorgt
 conda activate snakemake
 
@@ -234,7 +232,6 @@ snakemake -s frag_recruit_local_dark_sunlit.smk --use-conda \
     -j 200 --latency-wait 120 --keep-going --rerun-triggers mtime
 
 
-#todo: running
 #! 6. RUN 4 dark sra metagenomes with dark_v4
 # exclude epi metag from sra_run_list.txt
 cd $maindir/metadata
@@ -252,13 +249,13 @@ snakemake -n -s frag_recruit_sra_dark.smk --rerun-triggers mtime
 # option: --keep-going: do not stop if some of the jobs failed
 # option: --rerun-triggers mtime: do not want to re-run jobs after changing contents in some rules)
 # option:  --rerun-incomplete
+# option:  --scheduler greedy if there are too many jobs
 
 snakemake -s frag_recruit_sra_dark.smk --use-conda \
     --cluster 'qsub -q low -l ncpus={threads},mem={resources.mem_mb}mb,walltime=48:10:00' \
     -j 200 --latency-wait 120 --keep-going --rerun-triggers mtime --scheduler greedy
 
 
-#todo: running
 #! 7. RUN 4 dark local metagenomes with dark_v4+omd_m
 conda activate snakemake
 
