@@ -296,10 +296,13 @@ write.csv(
 #     device="pdf", height=6, width=8)
 
 
-# original mapping rate
+#! replace 'outside_omd_mags' with 'omd_m_dark'
+combined_map_rate_metadata <- combined_map_rate_metadata %>% 
+    filter(dataset != "outside_omd_mags")
+
 combined_map_rate_metadata$dataset <- factor(
     combined_map_rate_metadata$dataset, levels = c(
-        "gorg_v4_concat", "outside_omd_mags", "gorg_v4_omd",
+        "gorg_v4_concat", "omd_m_dark", "gorg_v4_omd",
         "outside_acinas_2020", "outside_gorg_tropics"))
 
 

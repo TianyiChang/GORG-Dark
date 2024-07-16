@@ -90,6 +90,10 @@ cat $maindir/reference/gorg_v4_concat.fa.gz \
 cat $maindir/reference/gorg_v4_concat.fa.gz \
     $maindir/reference/outside_gorg_tropics.fa.gz > $maindir/reference/gorg_v4_tropics.fa.gz
 
+# 20240715: combine dark_v4 and omd-m-dark
+cat $maindir/reference/gorg_v4_concat.fa.gz \
+    $maindir/reference/omd_m_dark.fa.gz > $maindir/reference/gorg_v4_omd_dark.fa.gz
+
 
 ########################################
 # re-organizing file and code systems ##
@@ -231,7 +235,8 @@ snakemake -s frag_recruit_local_dark_sunlit.smk --use-conda \
     --cluster 'qsub -q low -l ncpus={threads},mem={resources.mem_mb}mb,walltime=48:10:00' \
     -j 200 --latency-wait 120 --keep-going --rerun-triggers mtime
 
-
+#todo [running]
+#!/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/frag_recruit/reference/gorg_v4_omd_dark.ref
 #! 6. RUN 4 dark sra metagenomes with dark_v4
 # exclude epi metag from sra_run_list.txt
 cd $maindir/metadata
@@ -255,8 +260,7 @@ snakemake -s frag_recruit_sra_dark.smk --use-conda \
     --cluster 'qsub -q low -l ncpus={threads},mem={resources.mem_mb}mb,walltime=48:10:00' \
     -j 200 --latency-wait 120 --keep-going --rerun-triggers mtime --scheduler greedy
 
-
-#! 7. RUN 4 dark local metagenomes with dark_v4+omd_m
+#! 7. RUN 4 dark local metagenomes
 conda activate snakemake
 
 cp $codedir/frag_recruit_local_dark.smk $maindir/result_4_local_dark/snakefiles
@@ -273,3 +277,5 @@ snakemake -n -s frag_recruit_local_dark.smk --rerun-triggers mtime
 snakemake -s frag_recruit_local_dark.smk --use-conda \
     --cluster 'qsub -q low -l ncpus={threads},mem={resources.mem_mb}mb,walltime=48:10:00' \
     -j 200 --latency-wait 120 --keep-going --rerun-triggers mtime
+
+#todo: rerun 'frag_recruit_mapping_rate_across_studies.r'

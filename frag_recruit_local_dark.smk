@@ -14,7 +14,7 @@ arc_id, = glob_wildcards("../../low_entropy/sags/arc/{arc}.fasta")
 
 ref_genomes = [
     'outside_gorg_tropics', 'outside_omd_mags', 'outside_acinas_2020',
-    'gorg_v4_concat', 'gorg_v4_omd', 'omd_m_dark']
+    'gorg_v4_concat', 'gorg_v4_omd', 'omd_m_dark', 'gorg_v4_omd_dark']
 
 rule all:
     input:
