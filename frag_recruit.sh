@@ -235,7 +235,6 @@ snakemake -s frag_recruit_local_dark_sunlit.smk --use-conda \
     --cluster 'qsub -q low -l ncpus={threads},mem={resources.mem_mb}mb,walltime=48:10:00' \
     -j 200 --latency-wait 120 --keep-going --rerun-triggers mtime
 
-#todo [running]
 #!/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/frag_recruit/reference/gorg_v4_omd_dark.ref
 #! 6. RUN 4 dark sra metagenomes with dark_v4
 # exclude epi metag from sra_run_list.txt

@@ -60,7 +60,7 @@ get_n_read <- function(path) {
 
 }
 
-#todo: un-comment the filter for result_4_local_dark and result_4_sra_dark
+
 combined_map_rate_metadata <- bind_rows(
     get_n_read("result_4_local_dark"),
     get_n_read("result_4_sra_dark")
@@ -78,7 +78,19 @@ combined_map_rate_metadata <- bind_rows(
         depth_group = str_replace(depth_group, "hadal", "HAD"),
         depth_group = ifelse(is.na(depth_group), "Special", depth_group),
         depth_group = factor(depth_group, levels = c("EPI", "MES", "BAT", "ABY", "HAD", "Special")))
-    
+
+
+# Check whether omd_m_dark has better pa-fraction representation than gorg-dark?
+malaspina_acc <- read_csv(
+    "metadata/metag_to_collect/acinas_malaspina_particle.csv") %>%
+    mutate(
+        pa_fl = ifelse(`filter size (μm)` == 0.8,
+            "PA", "FL")) %>%
+    select(run_accessions = ENA_Run_Accession_ID, pa_fl)
+
+mapping_rate_pafl <- combined_map_rate_metadata %>% 
+    left_join(malaspina_acc, by = 'run_accessions') %>% 
+    filter(!is.na(pa_fl))
 
 ########################
 ### statistical test ###
@@ -240,6 +252,16 @@ write.csv(
     games_gt_gd_sunlit_dark_frag_recru_region,
     "between_datasets/v4/games_gt_gd_sunlit_dark_frag_recru_region.csv")
 
+games_pafl <- mapping_rate_pafl %>% 
+    group_by(pa_fl) %>% 
+    games_howell_test(
+        mapping_rate ~ dataset, conf.level = 0.95, detailed = TRUE)
+
+write.csv(
+    games_pafl,
+    "between_datasets/v4/games_pafl_across_studies.csv")
+
+
 #? Tukey test
 tukey_gt_gd_sunlit_dark_frag_recru_depth <- df_logit %>%
     anti_join(df_logit_no_duplic_depth_group, by = "depth_group") %>% 
@@ -297,14 +319,23 @@ write.csv(
 
 
 #! replace 'outside_omd_mags' with 'omd_m_dark'
+#! replace 'gorg_v4_omd' with 'gorg_v4_omd_dark'
 combined_map_rate_metadata <- combined_map_rate_metadata %>% 
-    filter(dataset != "outside_omd_mags")
+    filter(dataset != "outside_omd_mags") %>% 
+    filter(dataset != "gorg_v4_omd")
+
+mapping_rate_pafl <- mapping_rate_pafl %>% 
+    filter(dataset != "gorg_v4_omd")
 
 combined_map_rate_metadata$dataset <- factor(
     combined_map_rate_metadata$dataset, levels = c(
-        "gorg_v4_concat", "omd_m_dark", "gorg_v4_omd",
+        "gorg_v4_concat", "omd_m_dark", "gorg_v4_omd_dark",
         "outside_acinas_2020", "outside_gorg_tropics"))
 
+mapping_rate_pafl$dataset <- factor(
+    mapping_rate_pafl$dataset, levels = c(
+        "gorg_v4_concat", "omd_m_dark", "outside_omd_mags",
+        "gorg_v4_omd_dark", "outside_acinas_2020", "outside_gorg_tropics"))
 
 combined_map_rate_metadata %>% 
     ggplot(aes(x=dataset, y=mapping_rate, fill=dataset)) +
@@ -336,4 +367,14 @@ combined_map_rate_metadata %>%
         theme(axis.text.x=element_text(angle=45, vjust=1, hjust=1))
 
 ggsave("between_datasets/v4/box_orig_depth_group.pdf",
+    device="pdf", height=5, width=8)
+
+mapping_rate_pafl %>% 
+    ggplot(aes(x=pa_fl, y=mapping_rate, fill=dataset)) +
+        geom_boxplot(outlier.shape=NA) +
+        xlab("") +
+        theme_classic() +
+        theme(axis.text.x=element_text(angle=45, vjust=1, hjust=1))
+
+ggsave("between_datasets/v4/box_orig_pafl.pdf",
     device="pdf", height=5, width=8)
