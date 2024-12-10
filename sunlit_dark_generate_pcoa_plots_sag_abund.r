@@ -140,7 +140,7 @@ major_pref_depth <- gd_depth_pc_df %>%
     count(preferred_depth) %>% 
     mutate(perc = 100 * n /sum(n)) %>% 
     arrange(-perc) %>% 
-    filter(n >= 50)
+    filter(n >= 20)
 
 pref_depth_sag_filtered <- pref_depth_sag %>% 
     semi_join(
@@ -153,6 +153,25 @@ v4_SAG_summary <- read_csv(
         is.na(preferred_depth), "rare_in_metag", preferred_depth
     )) %>% 
     select(-preferred_depth)
+
+#20241210: update depth_niche after the inclusion of 9 addit hadal metag (n=11)
+#20241210: change all Black and Baltic Sea sags depth_niche to NA
+depth_niche_new_df <- v4_SAG_summary %>% 
+    select(SAG, niche_depth_new = niche_depth)
+
+v4_SAG_summary_updated <- read_csv("../sag_metadata/v4_SAG_summary_20240625.csv") %>% 
+    rename(niche_depth_old = niche_depth) %>% 
+    left_join(depth_niche_new_df, by = "SAG") %>% 
+    relocate(niche_depth_new, .after = niche_depth_old) %>% 
+    mutate(
+        niche_depth_new = case_when(
+            ocean_province == 'Black Sea' ~ 'NA',
+            ocean_province == 'Baltic Sea' ~ 'NA',
+            TRUE ~ niche_depth_new
+        )
+    )
+
+write_csv(v4_SAG_summary_updated, "../sag_metadata/v5_SAG_summary_20241210.csv")
 
 # append "doubling_hours" column to sag metadata
 grodon <- read_tsv("../grodon/gorgd_grodon_combined.tsv") %>% 
@@ -178,13 +197,21 @@ v4_SAG_summary <- v4_SAG_summary %>%
 
 write_csv(v4_SAG_summary, "../sag_metadata/v4_SAG_summary_20240625_mismatch.csv")
 
+#! add pa_fl info into the metadata table
+pa_fl_df <- read_csv(
+    'sag_PA_vs_FL/summary/statistics_w_pa_fl_malaspina_metag_only_1000_4200_sag_depth.csv') %>% 
+    select(SAG = sag, pa_fl, pa_fl_pvalue = p.adj)
+
+v4_SAG_summary <- v4_SAG_summary %>% 
+    left_join(pa_fl_df, by = "SAG")
+
+write_csv(v4_SAG_summary, "../sag_metadata/v4_SAG_summary_20240823_pafl.csv")
 
 #=====================#
 ## Generate figures ##
 #=====================#
 
 #! noted: check whether the fct_level is correct for 'major_pref_depth'
-#todo: change names to EPI, MES...
 
 fct_level = c(
     "EPI", "EPI-MES", "MES", "MES-BAT",
@@ -218,8 +245,10 @@ generate_pcoa_figs <- function(input_df, outfile) {
 
     colour_count <- length(
         unique(filtered_depth_pc_df$preferred_depth))
-    #? Spectral (11) or Paired (12)
-    getPalette = colorRampPalette(brewer.pal(12, "Paired"))
+    #? Spectral (11) or Paired (12) or Bluses (9)
+    # colorRampPalette(rev(brewer.pal(11, "Spectral"))) to invert color
+    # getPalette = colorRampPalette(brewer.pal(9, "YlGnBu")[3:9])
+    getPalette = colorRampPalette(brewer.pal(9, "RdBu"))
 
     ggplot(filtered_depth_pc_df, aes(x=PC_1, y=PC_2)) +
         geom_point(alpha=0.6, size=1.3,
@@ -248,11 +277,11 @@ generate_pcoa_figs <- function(input_df, outfile) {
 
 generate_pcoa_figs(
     gd_depth_pc_df,
-    "gd_pcoa_preferred_depth_sunlit_dark_metag.pdf")
+    "gd_pcoa_preferred_depth_sunlit_dark_metag_rdbu.pdf")
 
 generate_pcoa_figs(
     gd_gt_depth_pc_df,
-    "gd_gt_pcoa_preferred_depth_sunlit_dark_metag.pdf")
+    "gd_gt_pcoa_preferred_depth_sunlit_dark_metag_rdbu.pdf")
 
 #====================================#
 ## Upset plot for region preference ##

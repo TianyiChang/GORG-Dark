@@ -13,14 +13,14 @@ library(Rsamtools)
 
 # noted: plan(multisession) will result in bugs
     
-plan(multicore, workers = 12)
+plan(multicore, workers = 30)
 
 get_bam_stats <- function(metag_batch) {
 
     setwd(str_c(
         "/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/frag_recruit/",
         metag_batch,
-        "/gorg_v3_tropics/aln_filter_bam"
+        "/gorg_v4_tropics/aln_filter_bam"
         ))
 
     get_idxstats <- function(bamfile) {
@@ -90,7 +90,7 @@ sag_classif <- bind_rows(
 
 setwd("/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/sag_metadata")
 
-gd_sag_size <- read_tsv("v3_SAG_summary_20240320.tsv") %>%
+gd_sag_size <- read_csv("v4_SAG_summary_20240625.csv") %>%
     select(sag = SAG, assembly_length)
 
 gt_sag_size <- read_tsv("gorg-tropics_sags_tableS2.tsv") %>% 

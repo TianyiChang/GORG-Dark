@@ -60,7 +60,7 @@ metag_missing_from_metag_metadata <- filter(run_lack_depth_in_sag_norm_abund_dep
 ##  Games-Howell test to predict depth layer of indiv SAGs ##
 #===========================================================#
 
-#! noted: there is lack of metag from the hadal zone (only 4 metag)
+#! noted: there is lack of metag from the hadal zone (only 11 metag)
 
 sag_norm_abund_no_na_depth <- sag_norm_abund_depth %>% 
     filter(!is.na(depth_group))
@@ -181,16 +181,29 @@ run_games_howell <- function(df, yvar, condition, stats_out, summary_out) {
 
 }
 
-print("Running games-howell test for depth preference")
-run_games_howell(
-    sag_norm_abund_no_na_depth, depth_group,
-    "depth", "sunlit_dark_sag_depth_games_howell_summary.csv",
-    "sunlit_dark_major_depth_4_indiv_sags.csv"
-    )
+# Parse command line arguments
+args <- commandArgs(trailingOnly = TRUE)
+analysis_type <- if (length(args) > 0) args[1] else "both"
 
-print("Running games-howell test for region preference")
-run_games_howell(
-    sag_norm_abund_region, ocean_province,
-    "region", "sunlit_dark_sag_region_games_howell_summary.csv",
-    "sunlit_dark_major_region_4_indiv_sags.csv"
+if (!analysis_type %in% c("depth", "region", "both")) {
+    stop("Invalid argument. Please specify either 'depth', 'region', or 'both'")
+}
+
+# Run the appropriate analysis based on the argument
+if (analysis_type == "depth" || analysis_type == "both") {
+    print("Running games-howell test for depth preference")
+    run_games_howell(
+        sag_norm_abund_no_na_depth, depth_group,
+        "depth", "sunlit_dark_sag_depth_games_howell_summary.csv",
+        "sunlit_dark_major_depth_4_indiv_sags.csv"
     )
+}
+
+if (analysis_type == "region" || analysis_type == "both") {
+    print("Running games-howell test for region preference")
+    run_games_howell(
+        sag_norm_abund_region, ocean_province,
+        "region", "sunlit_dark_sag_region_games_howell_summary.csv",
+        "sunlit_dark_major_region_4_indiv_sags.csv"
+    )
+}
