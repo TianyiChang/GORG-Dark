@@ -156,6 +156,7 @@ v4_SAG_summary <- read_csv(
 
 #20241210: update depth_niche after the inclusion of 9 addit hadal metag (n=11)
 #20241210: change all Black and Baltic Sea sags depth_niche to NA
+#20241218: change depth of AM-164 from 'omz' to 400 as Maria requested
 depth_niche_new_df <- v4_SAG_summary %>% 
     select(SAG, niche_depth_new = niche_depth)
 
@@ -168,10 +169,12 @@ v4_SAG_summary_updated <- read_csv("../sag_metadata/v4_SAG_summary_20240625.csv"
             ocean_province == 'Black Sea' ~ 'NA',
             ocean_province == 'Baltic Sea' ~ 'NA',
             TRUE ~ niche_depth_new
-        )
+        ),
+        depth = ifelse(depth == 'omz', 400, depth),
+        depth = as.numeric(str_replace(depth, "m|,", ""))
     )
 
-write_csv(v4_SAG_summary_updated, "../sag_metadata/v5_SAG_summary_20241210.csv")
+write_csv(v4_SAG_summary_updated, "../sag_metadata/v5_SAG_summary_20241218.csv")
 
 # append "doubling_hours" column to sag metadata
 grodon <- read_tsv("../grodon/gorgd_grodon_combined.tsv") %>% 

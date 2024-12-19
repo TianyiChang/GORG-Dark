@@ -359,3 +359,28 @@ setwd("/mnt/scgc/stepanauskas_nfs/projects/gorg-dark/frag_recruit/metadata")
 
 write_csv(full_df_addit, "metag_metat_sag_v4.csv")
 
+
+# export metadata of analyzed metag in frag recruit for supplementary table
+frag_recruit_metag_metad <- full_df_addit %>% 
+    filter(group != 'metat' & group != 'sag') %>% 
+    mutate(
+        data_provider = case_when(
+            group == 'bill' ~ 'Steven Biller sbiller@wellesley.edu',
+            group == 'nuno' ~ 'Takuro Nunoura takuron@jamstec.go.jp',
+            TRUE ~ 'public database'),
+        depth_group = case_when(
+            depth_group == 'epi' ~ 'EPI',
+            depth_group == 'meso' ~ 'MES',
+            depth_group == 'bathy' ~ 'BAT',
+            depth_group == 'abysso' ~ 'ABY',
+            depth_group == 'hadal' ~ 'HAD',
+            TRUE ~ depth_group)) %>%
+    select(
+        run_accessions, longitude, latitude, 
+        depth, depth_group, 
+        region = ocean_province, 
+        geographic_cluster = clust,
+        data_provider) %>% 
+    rename_with(~ str_to_sentence(str_replace_all(., "_", " ")))
+
+write_csv(frag_recruit_metag_metad, 'frag_recruit_metag_metad.csv')
